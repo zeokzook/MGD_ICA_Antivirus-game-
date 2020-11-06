@@ -26,6 +26,7 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
+import Foundation
 import SpriteKit
 
 class GameOverScene : SKScene
@@ -50,16 +51,17 @@ class GameOverScene : SKScene
       SKAction.run()
         {
           [weak self] in
-          guard let 'self' = self else { return }
+          guard let `self` = self else { return }
           let reveal = SKTransition.flipHorizontal(withDuration: 0.5)
           let scene = GameScene(size: size)
           self.view?.presentScene(scene, transition:reveal)
         }
     ]))
-    
-    required init(coder aDecoder:NSCoder)
+    }
+  
+    required init(coder aDecoder: NSCoder)
     {
       fatalError("init(coder:) has not been implemented")
     }
-  }
+  
 }

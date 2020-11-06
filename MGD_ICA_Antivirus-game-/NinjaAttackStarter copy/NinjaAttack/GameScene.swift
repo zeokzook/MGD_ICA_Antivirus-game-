@@ -80,6 +80,7 @@ struct PhysicsCategory
 class GameScene: SKScene
 {
   let player = SKSpriteNode(imageNamed: "player")
+  var monstersDestroyed = 0
   
   override func didMove(to view:SKView)
   {
@@ -196,6 +197,14 @@ class GameScene: SKScene
     print("Hit")
     projectile.removeFromParent()
     monster.removeFromParent()
+    
+    monstersDestroyed += 1
+    if monstersDestroyed > 30
+    {
+      let reveal = SKTransition.flipHorizontal(withDuration: 0.5)
+      let gameOverScene = GameOverScene(size: self.size, won: true)
+      view?.presentScene(gameOverScene, transition: reveal)
+    }
   }
   
 }
