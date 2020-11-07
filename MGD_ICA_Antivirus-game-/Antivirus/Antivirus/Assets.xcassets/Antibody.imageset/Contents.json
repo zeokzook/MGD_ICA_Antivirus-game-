@@ -2,14 +2,17 @@
   "images" : [
     {
       "idiom" : "universal",
+      "filename" : "Antibody-1.png",
       "scale" : "1x"
     },
     {
       "idiom" : "universal",
+      "filename" : "Antibody.png",
       "scale" : "2x"
     },
     {
       "idiom" : "universal",
+      "filename" : "Antibody-2.png",
       "scale" : "3x"
     }
   ],
