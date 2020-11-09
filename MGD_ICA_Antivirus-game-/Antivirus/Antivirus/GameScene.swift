@@ -52,7 +52,8 @@ extension CGPoint
 enum DimensionFace: UInt8
 {
     case front = 0
-    case back = 1
+    case back = 0b1
+    case null = 0b11111111
 }
 
 struct PhysicsCategory
@@ -73,17 +74,38 @@ class GameScene: SKScene
     var moveAmtY: CGFloat = 0
     var initPos: CGPoint = CGPoint.zero
     var initTouch: CGPoint = CGPoint.zero
+    var currentDimension: DimensionFace = .front
     
     let fireRate: Double = 1.5
     let moveAmtthreshold: CGFloat = 100.0
     
     override func didMove(to view: SKView)
     {
-        backgroundColor = UIColor(displayP3Red: 0.545, green: 0, blue: 0, alpha: 1.0)
+        backgroundColor = SKColor.white
         
         player.position = CGPoint(x: size.width * 0.1, y: size.height * 0.5)
-        
+        player.physicsBody = SKPhysicsBody(circleOfRadius: player.size.width/2)
+        player.physicsBody?.affectedByGravity = false
+        player.physicsBody?.categoryBitMask = PhysicsCategory.playerFront
+
         addChild(player)
+        
+        run(SKAction.repeatForever(
+            SKAction.sequence([
+                SKAction.run({
+                    let i = self.random(min:0.0, max:5.0)
+                    if(i <= 2.0)
+                    {
+                        self.addEnemy(dimension: .front)
+                    }
+                    else if(i >= 3.0)
+                    {
+                        self.addEnemy(dimension: .back)
+                    }
+                }),
+                SKAction.wait(forDuration: 1.0)
+            ])
+        ))
     }
     
     func random() -> CGFloat
@@ -102,27 +124,38 @@ class GameScene: SKScene
         
         let actualY = random(min: enemy.size.height/2, max: size.height - enemy.size.height/2)
         
+        enemy.position = CGPoint(x: size.width + enemy.size.width/2, y:actualY )
+        
         addChild(enemy)
-        enemy.physicsBody = SKPhysicsBody(rectangleOf: enemy.size)
+        enemy.physicsBody = SKPhysicsBody(circleOfRadius: enemy.size.width/2)
         enemy.physicsBody?.isDynamic = true
+        enemy.physicsBody?.affectedByGravity = false
         if(dimension == .front)
         {
             enemy.physicsBody?.categoryBitMask = PhysicsCategory.monsterFront
+            enemy.physicsBody?.collisionBitMask = PhysicsCategory.playerFront
         }
         else if(dimension == .back)
         {
             enemy.physicsBody?.categoryBitMask = PhysicsCategory.monsterBack
+            enemy.physicsBody?.collisionBitMask = PhysicsCategory.playerBack
         }
         
-        
+        if(currentDimension == dimension)
+        {
+            enemy.alpha = 1.0
+        }
+        else
+        {
+            enemy.alpha = 0.5
+        }
+
         let actualDuration = random(min: CGFloat(2.0), max: CGFloat(4.0))
-        
-        let actionMove = SKAction.move(to: CGPoint(x: -enemy.size.width/2, y: actualY), duration: TimeInterval(actualDuration))
+        let actionMove = SKAction.move(to: CGPoint(x: -enemy.size.width/2, y:actualY), duration: TimeInterval(actualDuration))
         let actionMoveDone = SKAction.removeFromParent()
+        
         enemy.run(SKAction.sequence([actionMove, actionMoveDone]))
     }
-    
-    
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?)
     {
@@ -150,11 +183,13 @@ class GameScene: SKScene
     {
         if moveAmtY < -moveAmtthreshold
         {
-            print("up")
+            print("Moving to back")
+            switchDimension(toDimension: .back)
         }
         else if moveAmtY > moveAmtthreshold
         {
-            print("down")
+            print("Moving to front")
+            switchDimension(toDimension: .front)
         }
         else
         {
@@ -173,9 +208,12 @@ class GameScene: SKScene
         }
     }
     
-    func switchDimension()
+    func switchDimension(toDimension: DimensionFace)
     {
-        //switch player dimension
+        currentDimension = toDimension
+        
+        //player.physicsBody?.collisionBitMask =
+        //changing a global variable(?) to set image alphas?
     }
     
     func playerMovement()
@@ -187,6 +225,7 @@ class GameScene: SKScene
     {
         
     }
+    
 }
 
 extension GameScene: SKPhysicsContactDelegate
