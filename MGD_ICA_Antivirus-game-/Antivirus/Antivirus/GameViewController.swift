@@ -19,7 +19,7 @@ class GameViewController: UIViewController
         let skView = view as! SKView
         skView.ignoresSiblingOrder = true
         skView.showsFPS = true
-        skView.showsPhysics = true
+        //skView.showsPhysics = true
         skView.showsNodeCount = true
         scene.scaleMode = .resizeFill
         skView.presentScene(scene)

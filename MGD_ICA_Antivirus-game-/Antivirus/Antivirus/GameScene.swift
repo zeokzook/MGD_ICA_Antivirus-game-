@@ -6,6 +6,7 @@
 //  Copyright © 2020 TAN, ADAM (Student). All rights reserved.
 //
 
+import CoreMotion
 import SpriteKit
 import GameplayKit
 
@@ -49,38 +50,24 @@ extension CGPoint
   }
 }
 
-enum DimensionFace: UInt8
+enum DimensionFace: CGFloat
 {
     case front = 0
-    case back = 0b1
-    case null = 0b11111111
+    case back  = -1
+    case null  = 10
 }
-
-/*struct PhysicsCategory
-{
-     static let none           : UInt32 = 0
-     static let all            : UInt32 = UInt32.max
-     static let playerFront    : UInt32 = 0b1   //1
-     static let playerBack     : UInt32 = 0b10  //2
-     static let enemyFront   : UInt32 = 0b11  //3
-     static let projectileFront: UInt32 = 0b100 //4
-     static let enemyBack    : UInt32 = 0b101 //5
-     static let projectileBack : UInt32 = 0b110 //6
-}*/
 
 struct PhysicsCategory : OptionSet
 {
     let rawValue: UInt32
     init(rawValue: UInt32) {self.rawValue = rawValue}
     
-    static let none            = PhysicsCategory(rawValue: 0b000000)
-    static let all             = PhysicsCategory(rawValue: UInt32.max)
-    static let enemyFront      = PhysicsCategory(rawValue: 0b000001)
-    static let enemyBack       = PhysicsCategory(rawValue: 0b000010)
-    static let projectileFront = PhysicsCategory(rawValue: 0b000100)
-    static let projectileBack  = PhysicsCategory(rawValue: 0b001000)
-    static let playerFront     = PhysicsCategory(rawValue: 0b010000)
-    static let playerBack      = PhysicsCategory(rawValue: 0b100000)
+    static let None            = PhysicsCategory(rawValue: 0b000000)
+    static let All             = PhysicsCategory(rawValue: UInt32.max)
+    static let Enemy           = PhysicsCategory(rawValue: 0b0001)
+    static let Projectile      = PhysicsCategory(rawValue: 0b0010)
+    static let Wall            = PhysicsCategory(rawValue: 0b0100)
+    static let Player          = PhysicsCategory(rawValue: 0b1000)
 }
 
 class GameScene: SKScene
@@ -91,8 +78,12 @@ class GameScene: SKScene
     var initTouch: CGPoint = CGPoint.zero
     var currentDimension: DimensionFace = .front
     
-    let fireRate: Double = 1.5
+    let projectileSpeed: Double = 3.0
     let moveAmtthreshold: CGFloat = 100.0
+
+    let wallColor = UIColor(red: 0.55, green: 0.0, blue: 0.0, alpha: 1.0)
+    
+    var motionManager: CMMotionManager!
     
     var collidedCounter = 0
     
@@ -105,13 +96,14 @@ class GameScene: SKScene
         
         player.position = CGPoint(x: size.width * 0.1, y: size.height * 0.5)
         player.physicsBody = SKPhysicsBody(circleOfRadius: player.size.width/2)
-        //player.physicsBody?.collisionBitMask = PhysicsCategory.none
-        //player.physicsBody?.categoryBitMask = PhysicsCategory.playerFront
-        //player.physicsBody?.contactTestBitMask = PhysicsCategory.enemyFront
-        player.physicsBody!.category = .playerFront
-        player.physicsBody!.collision = .none
+        player.physicsBody!.category = .Player
+        player.physicsBody!.collision = .None
+        player.Dimension = currentDimension
         
         addChild(player)
+        
+        motionManager = CMMotionManager()
+        motionManager.startAccelerometerUpdates()
         
         run(SKAction.repeatForever(
             SKAction.sequence([
@@ -129,6 +121,19 @@ class GameScene: SKScene
                 SKAction.wait(forDuration: 1.0)
             ])
         ))
+        
+        //run(SKAction.run({self.addWall(dimension: .front)}))
+    }
+    
+    override func update(_ currentTime: TimeInterval)
+    {
+        #if targetEnvironment(simulator)
+        #else
+        if let accelerometerData = motionManager.accelerometerData
+        {
+            physicsWorld.gravity = CGVector(dx: accelerometerData.acceleration.y * -50, dy: accelerometerData.acceleration.x * -50)
+        }
+        #endif
     }
     
     func random() -> CGFloat
@@ -151,27 +156,16 @@ class GameScene: SKScene
         let actualY = player.position.y
         
         enemy.position = CGPoint(x: size.width + enemy.size.width/2, y:actualY )
+        enemy.Dimension = dimension
         
         addChild(enemy)
+        
         enemy.physicsBody = SKPhysicsBody(circleOfRadius: enemy.size.width/2)
         enemy.physicsBody!.isDynamic = true
-        //enemy.physicsBody?.collisionBitMask = PhysicsCategory.none
-        enemy.physicsBody!.collision = .none
-        
-        if(dimension == .front)
-        {
-            //enemy.physicsBody!.categoryBitMask = PhysicsCategory.enemyFront
-            //enemy.physicsBody!.contactTestBitMask = PhysicsCategory.playerFront | PhysicsCategory.projectileFront
-            enemy.physicsBody!.category = .enemyFront
-            enemy.physicsBody!.contact = .playerFront
-        }
-        else if(dimension == .back)
-        {
-            //enemy.physicsBody!.categoryBitMask = PhysicsCategory.enemyBack
-            //enemy.physicsBody!.contactTestBitMask = PhysicsCategory.playerBack | PhysicsCategory.projectileBack
-            enemy.physicsBody!.category = .enemyBack
-            enemy.physicsBody!.contact = .playerBack
-        }
+        enemy.physicsBody!.affectedByGravity = false
+        enemy.physicsBody!.category = .Enemy
+        enemy.physicsBody!.collision = .None
+        enemy.physicsBody!.contact = .Player
         
         if(currentDimension == dimension)
         {
@@ -188,6 +182,42 @@ class GameScene: SKScene
         
         enemy.run(SKAction.sequence([actionMove, actionMoveDone]))
     }
+    
+    func addWall(dimension: DimensionFace)
+    {
+        let wallRect = CGRect(x:0, y:0, width: 100, height: size.height)
+        let wall = SKShapeNode(rect: wallRect)
+        
+        wall.name = "editable"
+        
+        wall.position = CGPoint(x: size.width + 1000, y: 0)
+        wall.fillColor = wallColor
+        wall.Dimension = dimension
+        
+        addChild(wall)
+        
+        wall.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: wallRect.width, height: wallRect.height), center: CGPoint(x: wallRect.width / 2, y: wallRect.height / 2))
+        wall.physicsBody!.affectedByGravity = false
+        wall.physicsBody!.category = .Wall
+        wall.physicsBody!.collision = .None
+        wall.physicsBody!.contact = .Player
+        
+        if(currentDimension == dimension)
+        {
+            wall.alpha = 1.0
+        }
+        else
+        {
+            wall.alpha = 0.5
+        }
+        
+        let actualDuration = 4.0
+        let actionMove = SKAction.move(to: CGPoint(x: -1000, y:0), duration: TimeInterval(actualDuration))
+        let actionMoveDone = SKAction.removeFromParent()
+        
+        wall.run(SKAction.sequence([actionMove, actionMoveDone]))
+    }
+    
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?)
     {
@@ -209,7 +239,7 @@ class GameScene: SKScene
         }
         
     }
-    
+
     //Shooting
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?)
     {
@@ -232,58 +262,40 @@ class GameScene: SKScene
         }
         else
         {
-            let projectile = SKSpriteNode(imageNamed:"Antibody")
-            projectile.position = player.position
-            projectile.name = "editable"
-            
-            projectile.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: projectile.size.width, height: projectile.size.height))
-            projectile.physicsBody?.isDynamic = true
-            //projectile.physicsBody?.collisionBitMask = PhysicsCategory.none
-            projectile.physicsBody!.collision = .none
-            
-            if currentDimension == .front
-            {
-                //projectile.physicsBody?.categoryBitMask = PhysicsCategory.projectileFront
-                projectile.physicsBody!.category = .projectileFront
-                projectile.physicsBody!.contact = .enemyFront
-            }
-            else if currentDimension == .back
-            {
-                //projectile.physicsBody?.categoryBitMask = PhysicsCategory.projectileBack
-                projectile.physicsBody!.category = .projectileBack
-                projectile.physicsBody!.contact = .enemyBack
-            }
-            
-            projectile.physicsBody?.usesPreciseCollisionDetection = true
-            
-            addChild(projectile)
-            
-            let shootAmount = projectile.position.x * 10
-            let realDest = CGPoint(x: shootAmount, y:0) + projectile.position
-            let actionRotate = SKAction.rotate(byAngle: -(CGFloat.pi)/2, duration: 0)
-            let actionMove = SKAction.move(to: realDest, duration: fireRate)
-            let actionMoveDone = SKAction.removeFromParent()
-            projectile.run(SKAction.sequence([actionRotate, actionMove, actionMoveDone]))
-            
+            shoot(dimension: currentDimension)
         }
+    }
+    
+    func shoot(dimension: DimensionFace)
+    {
+        let projectile = SKSpriteNode(imageNamed:"Antibody")
+        projectile.position = player.position
+        projectile.name = "editable"
+        
+        projectile.Dimension = dimension
+        
+        addChild(projectile)
+        
+        projectile.physicsBody = SKPhysicsBody(circleOfRadius: projectile.size.width/2 - 2)
+        projectile.physicsBody?.isDynamic = true
+        projectile.physicsBody!.affectedByGravity = false
+        projectile.physicsBody?.usesPreciseCollisionDetection = true
+        projectile.physicsBody!.category = .Projectile
+        projectile.physicsBody!.collision = .None
+        projectile.physicsBody!.contact = .Enemy
+        
+        let shootAmount = projectile.position.x * 10
+        let realDest = CGPoint(x: shootAmount, y:0) + projectile.position
+        let actionRotate = SKAction.rotate(byAngle: -(CGFloat.pi)/2, duration: 0)
+        let actionMove = SKAction.move(to: realDest, duration: projectileSpeed)
+        let actionMoveDone = SKAction.removeFromParent()
+        projectile.run(SKAction.sequence([actionRotate, actionMove, actionMoveDone]))
     }
     
     func switchDimension(toDimension: DimensionFace)
     {
         currentDimension = toDimension
-        
-        if(toDimension == .front)
-        {
-            //player.physicsBody?.categoryBitMask = PhysicsCategory.playerFront
-            //player.physicsBody?.contactTestBitMask = PhysicsCategory.enemyFront
-            player.physicsBody?.category = .playerFront
-        }
-        else if (toDimension == .back)
-        {
-            //player.physicsBody?.categoryBitMask = PhysicsCategory.playerBack
-            //player.physicsBody?.contactTestBitMask = PhysicsCategory.enemyBack
-            player.physicsBody?.category = .playerBack
-        }
+        player.Dimension = toDimension
         
         self.enumerateChildNodes(withName: "editable")
         {
@@ -291,41 +303,22 @@ class GameScene: SKScene
             
             if(toDimension == .front)
             {
-                /*if node.physicsBody?.categoryBitMask == PhysicsCategory.enemyFront || node.physicsBody?.categoryBitMask == PhysicsCategory.projectileFront
+                if node.Dimension == .front
                 {
                     node.alpha = 1.0
                 }
-                else if node.physicsBody?.categoryBitMask == PhysicsCategory.enemyBack || node.physicsBody?.categoryBitMask == PhysicsCategory.projectileBack
-                {
-                    node.alpha = 0.5
-                }*/
-                
-                if node.physicsBody?.category == .enemyFront || node.physicsBody?.category == .projectileFront
-                {
-                    node.alpha = 1.0
-                }
-                else if node.physicsBody?.category == .enemyBack || node.physicsBody?.category == .projectileBack
+                else
                 {
                     node.alpha = 0.5
                 }
             }
-            
-            if(toDimension == .back)
+            else if(toDimension == .back)
             {
-                /*if node.physicsBody?.categoryBitMask == PhysicsCategory.enemyFront || node.physicsBody?.categoryBitMask == PhysicsCategory.projectileFront
+                if node.Dimension == .front
                 {
                     node.alpha = 0.5
                 }
-                else if node.physicsBody?.categoryBitMask == PhysicsCategory.enemyBack || node.physicsBody?.categoryBitMask == PhysicsCategory.projectileBack
-                {
-                    node.alpha = 1.0
-                }*/
-                
-                if node.physicsBody?.category == .enemyFront || node.physicsBody?.category == .projectileFront
-                {
-                    node.alpha = 0.5
-                }
-                else if node.physicsBody?.category == .enemyBack || node.physicsBody?.category == .projectileBack
+                else
                 {
                     node.alpha = 1.0
                 }
@@ -336,6 +329,11 @@ class GameScene: SKScene
     func playerMovement()
     {
         //Player move up and down depending on gyroscope
+    }
+    
+    func PlayerDied()
+    {
+        print("Oh no you dead!")
     }
     
     func collidedEnemyWithPlayer(Enemy: SKSpriteNode, Player: SKSpriteNode)
@@ -353,6 +351,32 @@ class GameScene: SKScene
         print("Projectile Collided #\(collidedCounter)")
     }
     
+}
+
+extension SKNode
+{
+    var Dimension: DimensionFace
+    {
+        get
+        {
+            if self.zPosition == DimensionFace.front.rawValue
+            {
+                return DimensionFace.front
+            }
+            else if self.zPosition == DimensionFace.back.rawValue
+            {
+                return DimensionFace.back
+            }
+            else
+            {
+                return DimensionFace.null
+            }
+        }
+        set(newValue)
+        {
+            self.zPosition = newValue.rawValue
+        }
+    }
 }
 
 extension SKPhysicsBody
@@ -398,108 +422,52 @@ extension GameScene: SKPhysicsContactDelegate
 {
     func didBegin(_ contact: SKPhysicsContact)
     {
-        let contactCategory: PhysicsCategory = [contact.bodyA.category, contact.bodyB.category]
-        
-        if contactCategory.contains([.playerFront, .enemyFront])
+        if contact.bodyA.node?.Dimension == contact.bodyB.node?.Dimension
         {
-            if contact.bodyA.category == .playerFront
-            {
-                if let player = contact.bodyA.node as? SKSpriteNode, let enemy = contact.bodyB.node as? SKSpriteNode
-                {
-                    collidedEnemyWithPlayer(Enemy: enemy, Player: player)
-                }
-            }
-            else
-            {
-                if let enemy = contact.bodyA.node as? SKSpriteNode, let player = contact.bodyB.node as? SKSpriteNode
-                {
-                    collidedEnemyWithPlayer(Enemy: enemy, Player: player)
-                }
-            }
-        }
-        
-        if contactCategory.contains([.playerBack, .enemyBack])
-        {
-            if contact.bodyA.category == .playerBack
-            {
-                if let player = contact.bodyA.node as? SKSpriteNode, let enemy = contact.bodyB.node as? SKSpriteNode
-                {
-                    collidedEnemyWithPlayer(Enemy: enemy, Player: player)
-                }
-            }
-            else
-            {
-                if let enemy = contact.bodyA.node as? SKSpriteNode, let player = contact.bodyB.node as? SKSpriteNode
-                {
-                    collidedEnemyWithPlayer(Enemy: enemy, Player: player)
-                }
-            }
-        }
-        
-        if contactCategory.contains([.projectileFront, .enemyFront])
-        {
-            if contact.bodyA.category == .projectileFront
-            {
-                if let projectile = contact.bodyA.node as? SKSpriteNode, let enemy = contact.bodyB.node as? SKSpriteNode
-                {
-                    collidedEnemyWithProjectile(Enemy: enemy, Projectile: projectile)
-                }
-            }
-            else
-            {
-                if let enemy = contact.bodyA.node as? SKSpriteNode, let projectile = contact.bodyB.node as? SKSpriteNode
-                {
-                    collidedEnemyWithProjectile(Enemy: enemy, Projectile: projectile)
-                }
-            }
-        }
-        
-        if contactCategory.contains([.projectileBack, .enemyBack])
-        {
-            if contact.bodyA.category == .projectileBack
-            {
-                if let projectile = contact.bodyA.node as? SKSpriteNode, let enemy = contact.bodyB.node as? SKSpriteNode
-                {
-                    collidedEnemyWithProjectile(Enemy: enemy, Projectile: projectile)
-                }
-            }
-            else
-            {
-                if let enemy = contact.bodyA.node as? SKSpriteNode, let projectile = contact.bodyB.node as? SKSpriteNode
-                {
-                    collidedEnemyWithProjectile(Enemy: enemy, Projectile: projectile)
-                }
-            }
-        }
-        
-        /*var firstBody: SKPhysicsBody
-        var secondBody: SKPhysicsBody
-        if contact.bodyA.categoryBitMask < contact.bodyB.categoryBitMask
-        {
-            firstBody = contact.bodyA
-            secondBody = contact.bodyB
-        }
-        else
-        {
-            firstBody = contact.bodyB
-            secondBody = contact.bodyA
-        }
-        
-        if((firstBody.categoryBitMask & PhysicsCategory.enemyFront != 0) && (secondBody.categoryBitMask & PhysicsCategory.playerFront != 0))
-        {
-            if let enemy = firstBody.node as? SKSpriteNode, let player = secondBody.node as? SKSpriteNode
-            {
-                collidedEnemyWithPlayer(Enemy: enemy, Player: player)
-            }
-        }
-        
-        if((firstBody.categoryBitMask & PhysicsCategory.projectileFront != 0) && (secondBody.categoryBitMask & PhysicsCategory.enemyFront != 0))
-        {
+            let contactCategory: PhysicsCategory = [contact.bodyA.category, contact.bodyB.category]
             
-            if let enemy = firstBody.node as? SKSpriteNode, let projectile = secondBody.node as? SKSpriteNode
+            if contactCategory.contains([.Player, .Enemy])
             {
-                collidedEnemyWithProjectile(Enemy: enemy, Projectile: projectile)
+                if contact.bodyA.category == .Player
+                {
+                    if let player = contact.bodyA.node as? SKSpriteNode, let enemy = contact.bodyB.node as? SKSpriteNode
+                    {
+                        collidedEnemyWithPlayer(Enemy: enemy, Player: player)
+                    }
+                }
+                else
+                {
+                    if let enemy = contact.bodyA.node as? SKSpriteNode, let player = contact.bodyB.node as? SKSpriteNode
+                    {
+                        collidedEnemyWithPlayer(Enemy: enemy, Player: player)
+                    }
+                }
             }
-        }*/
+            
+            if contactCategory.contains([.Projectile, .Enemy])
+            {
+                if contact.bodyA.category == .Projectile
+                {
+                    if let projectile = contact.bodyA.node as? SKSpriteNode, let enemy = contact.bodyB.node as? SKSpriteNode
+                    {
+                        collidedEnemyWithProjectile(Enemy: enemy, Projectile: projectile)
+                    }
+                }
+                else
+                {
+                    if let enemy = contact.bodyA.node as? SKSpriteNode, let projectile = contact.bodyB.node as? SKSpriteNode
+                    {
+                        collidedEnemyWithProjectile(Enemy: enemy, Projectile: projectile)
+                    }
+                }
+            }
+            
+            
+            if contactCategory.contains([.Wall, .Player])
+            {
+                PlayerDied()
+            }
+        }
+        
     }
 }
