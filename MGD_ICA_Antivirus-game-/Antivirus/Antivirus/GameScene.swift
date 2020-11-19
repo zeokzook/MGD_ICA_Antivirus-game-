@@ -78,10 +78,13 @@ class GameScene: SKScene
     var initTouch: CGPoint = CGPoint.zero
     var currentDimension: DimensionFace = .front
     
-    let projectileSpeed: Double = 3.0
+    let projectileSpeed: Double = 0.5 //smaller number is faster
     let moveAmtthreshold: CGFloat = 100.0
 
-    let wallColor = UIColor(red: 0.55, green: 0.0, blue: 0.0, alpha: 1.0)
+    let bgColor = SKColor(red: 0.23, green: 0.0, blue: 0.0, alpha: 1.0)
+    let wallColor = UIColor(red: 0.90, green: 0.0, blue: 0.0, alpha: 1.0)
+    
+    var wallTimer = 0
     
     var motionManager: CMMotionManager!
     
@@ -89,7 +92,7 @@ class GameScene: SKScene
     
     override func didMove(to view: SKView)
     {
-        backgroundColor = SKColor.white
+        backgroundColor = bgColor
         
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
@@ -109,7 +112,14 @@ class GameScene: SKScene
             SKAction.sequence([
                 SKAction.run({
                     let i = self.random(min:0.0, max:5.0)
-                    if(i <= 2.0)
+                    
+                    self.wallTimer += 1
+                    
+                    if(self.wallTimer == 10)
+                    {
+                        self.addWall(dimension: self.currentDimension)
+                    }
+                    else if(i <= 2.0)
                     {
                         self.addEnemy(dimension: .front)
                     }
@@ -117,6 +127,7 @@ class GameScene: SKScene
                     {
                         self.addEnemy(dimension: .back)
                     }
+                    
                 }),
                 SKAction.wait(forDuration: 1.0)
             ])
@@ -152,8 +163,8 @@ class GameScene: SKScene
         
         enemy.name = "editable"
         
-        //let actualY = random(min: enemy.size.height/2, max: size.height - enemy.size.height/2)
-        let actualY = player.position.y
+        let actualY = random(min: enemy.size.height/2, max: size.height - enemy.size.height/2)
+        //let actualY = player.position.y
         
         enemy.position = CGPoint(x: size.width + enemy.size.width/2, y:actualY )
         enemy.Dimension = dimension
@@ -214,8 +225,11 @@ class GameScene: SKScene
         let actualDuration = 4.0
         let actionMove = SKAction.move(to: CGPoint(x: -1000, y:0), duration: TimeInterval(actualDuration))
         let actionMoveDone = SKAction.removeFromParent()
+        let actionResetTimer = SKAction.run {
+            self.wallTimer = 0
+        }
         
-        wall.run(SKAction.sequence([actionMove, actionMoveDone]))
+        wall.run(SKAction.sequence([actionMove, actionMoveDone, actionResetTimer]))
     }
     
     
@@ -326,20 +340,20 @@ class GameScene: SKScene
         }
     }
     
-    func playerMovement()
-    {
-        //Player move up and down depending on gyroscope
-    }
-    
     func PlayerDied()
     {
         print("Oh no you dead!")
+        
+        let reveal = SKTransition.flipHorizontal(withDuration: 0.5)
+        let gameOverScene = GameOverScene(size: self.size, won: false)
+        self.view?.presentScene(gameOverScene, transition: reveal)
     }
     
     func collidedEnemyWithPlayer(Enemy: SKSpriteNode, Player: SKSpriteNode)
     {
         collidedCounter += 1
         print("Player Collided #\(collidedCounter)")
+        PlayerDied()
     }
     
     func collidedEnemyWithProjectile(Enemy: SKSpriteNode, Projectile: SKSpriteNode)

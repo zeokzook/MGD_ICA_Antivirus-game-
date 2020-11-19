@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0F84EEAA2566E56700DD3997 /* GameOverScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F84EEA92566E56700DD3997 /* GameOverScene.swift */; };
 		0FFC3F8325556E5A002B7187 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFC3F8225556E5A002B7187 /* AppDelegate.swift */; };
 		0FFC3F8725556E5A002B7187 /* Actions.sks in Resources */ = {isa = PBXBuildFile; fileRef = 0FFC3F8625556E5A002B7187 /* Actions.sks */; };
 		0FFC3F8925556E5A002B7187 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFC3F8825556E5A002B7187 /* GameScene.swift */; };
@@ -34,6 +35,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0F84EEA92566E56700DD3997 /* GameOverScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameOverScene.swift; sourceTree = "<group>"; };
 		0F9BEDD4256496AF005551B6 /* Antivirus.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Antivirus.entitlements; sourceTree = "<group>"; };
 		0FFC3F7F25556E5A002B7187 /* Antivirus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Antivirus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0FFC3F8225556E5A002B7187 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -103,6 +105,7 @@
 				0FFC3F8F25556E5B002B7187 /* Assets.xcassets */,
 				0FFC3F9125556E5B002B7187 /* LaunchScreen.storyboard */,
 				0FFC3F9425556E5B002B7187 /* Info.plist */,
+				0F84EEA92566E56700DD3997 /* GameOverScene.swift */,
 			);
 			path = Antivirus;
 			sourceTree = "<group>";
@@ -241,6 +244,7 @@
 			files = (
 				0FFC3F8925556E5A002B7187 /* GameScene.swift in Sources */,
 				0FFC3F8B25556E5A002B7187 /* GameViewController.swift in Sources */,
+				0F84EEAA2566E56700DD3997 /* GameOverScene.swift in Sources */,
 				0FFC3F8325556E5A002B7187 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -417,6 +421,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = VDD47WJC9G;
 				INFOPLIST_FILE = Antivirus/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -438,6 +443,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = VDD47WJC9G;
 				INFOPLIST_FILE = Antivirus/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
