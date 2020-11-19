@@ -86,6 +86,8 @@ class GameScene: SKScene
     
     var wallTimer = 0
     
+    var calibrate: Double!
+    
     var motionManager: CMMotionManager!
     
     var collidedCounter = 0
@@ -107,6 +109,11 @@ class GameScene: SKScene
         
         motionManager = CMMotionManager()
         motionManager.startAccelerometerUpdates()
+        
+        if let accelerometerData = motionManager.accelerometerData
+        {
+            calibrate = accelerometerData.acceleration.x
+        }
         
         run(SKAction.repeatForever(
             SKAction.sequence([
@@ -138,11 +145,27 @@ class GameScene: SKScene
     
     override func update(_ currentTime: TimeInterval)
     {
+        
+        
         #if targetEnvironment(simulator)
         #else
+        
         if let accelerometerData = motionManager.accelerometerData
         {
-            physicsWorld.gravity = CGVector(dx: accelerometerData.acceleration.y * -50, dy: accelerometerData.acceleration.x * -50)
+            var changed = accelerometerData.acceleration.x //+ calibrate
+            print(changed)
+            
+            physicsWorld.gravity = CGVector(dx: accelerometerData.acceleration.y * 0, dy: changed * 10)
+        }
+        
+        if player.position.y <= 0
+        {
+            player.position.y = 0
+        }
+        
+        if player.position.y >= size.height - player.size.height
+        {
+            player.position.y = size.height - player.size.height
         }
         #endif
     }
@@ -353,7 +376,7 @@ class GameScene: SKScene
     {
         collidedCounter += 1
         print("Player Collided #\(collidedCounter)")
-        PlayerDied()
+        //PlayerDied()
     }
     
     func collidedEnemyWithProjectile(Enemy: SKSpriteNode, Projectile: SKSpriteNode)
@@ -479,7 +502,7 @@ extension GameScene: SKPhysicsContactDelegate
             
             if contactCategory.contains([.Wall, .Player])
             {
-                PlayerDied()
+                //PlayerDied()
             }
         }
         
