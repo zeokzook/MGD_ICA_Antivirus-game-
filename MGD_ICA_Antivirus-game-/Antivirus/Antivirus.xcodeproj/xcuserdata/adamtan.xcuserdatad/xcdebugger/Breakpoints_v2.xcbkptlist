@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "031EAC01-AA27-46F5-8165-AA37DEC3C305"
+   type = "1"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "7001DF01-9881-41FB-973D-58B788603612"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Antivirus/GameScene.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "80"
+            endingLineNumber = "80"
+            landmarkName = "GameScene"
+            landmarkType = "3">
+            <Locations>
+               <Location
+                  uuid = "7001DF01-9881-41FB-973D-58B788603612 - 4140525c356ff2bb"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "Antivirus.GameScene.wallTimer.getter : Swift.Int"
+                  moduleName = "Antivirus"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zaaraykazi/Desktop/MGD_ICA/MGD_ICA_Antivirus-game-/Antivirus/Antivirus/GameScene.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "80"
+                  endingLineNumber = "80"
+                  offsetFromSymbolStart = "104">
+               </Location>
+               <Location
+                  uuid = "7001DF01-9881-41FB-973D-58B788603612 - 8ba0583ceb02beb7"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "Antivirus.GameScene.wallTimer.setter : Swift.Int"
+                  moduleName = "Antivirus"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zaaraykazi/Desktop/MGD_ICA/MGD_ICA_Antivirus-game-/Antivirus/Antivirus/GameScene.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "80"
+                  endingLineNumber = "80"
+                  offsetFromSymbolStart = "108">
+               </Location>
+               <Location
+                  uuid = "7001DF01-9881-41FB-973D-58B788603612 - 35652181f3efa5e8"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "Antivirus.GameScene.wallTimer.modify : Swift.Int"
+                  moduleName = "Antivirus"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zaaraykazi/Desktop/MGD_ICA/MGD_ICA_Antivirus-game-/Antivirus/Antivirus/GameScene.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0"
+                  offsetFromSymbolStart = "16">
+               </Location>
+               <Location
+                  uuid = "7001DF01-9881-41FB-973D-58B788603612 - 2cd6a9f40a3123b7"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "Antivirus.GameScene.wallTimer.modify : Swift.Int with unmangled suffix &quot;.resume.0&quot;"
+                  moduleName = "Antivirus"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zaaraykazi/Desktop/MGD_ICA/MGD_ICA_Antivirus-game-/Antivirus/Antivirus/GameScene.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "80"
+                  endingLineNumber = "80"
+                  offsetFromSymbolStart = "8">
+               </Location>
+               <Location
+                  uuid = "7001DF01-9881-41FB-973D-58B788603612 - 7779e42ece30d502"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "Antivirus.GameScene.init(size: __C.CGSize) -&gt; Antivirus.GameScene"
+                  moduleName = "Antivirus"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zaaraykazi/Desktop/MGD_ICA/MGD_ICA_Antivirus-game-/Antivirus/Antivirus/GameScene.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "80"
+                  endingLineNumber = "80"
+                  offsetFromSymbolStart = "940">
+               </Location>
+               <Location
+                  uuid = "7001DF01-9881-41FB-973D-58B788603612 - afd46cca655a2a7d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "Antivirus.GameScene.init() -&gt; Antivirus.GameScene"
+                  moduleName = "Antivirus"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zaaraykazi/Desktop/MGD_ICA/MGD_ICA_Antivirus-game-/Antivirus/Antivirus/GameScene.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "80"
+                  endingLineNumber = "80"
+                  offsetFromSymbolStart = "908">
+               </Location>
+               <Location
+                  uuid = "7001DF01-9881-41FB-973D-58B788603612 - c1a3bb52d3d2f9be"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "Antivirus.GameScene.init(coder: __C.NSCoder) -&gt; Swift.Optional&lt;Antivirus.GameScene&gt;"
+                  moduleName = "Antivirus"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/zaaraykazi/Desktop/MGD_ICA/MGD_ICA_Antivirus-game-/Antivirus/Antivirus/GameScene.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "80"
+                  endingLineNumber = "80"
+                  offsetFromSymbolStart = "924">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>

@@ -62,12 +62,12 @@ struct PhysicsCategory : OptionSet
     let rawValue: UInt32
     init(rawValue: UInt32) {self.rawValue = rawValue}
     
-    static let None            = PhysicsCategory(rawValue: 0b000000)
+    static let None            = PhysicsCategory(rawValue: 0b0000)
     static let All             = PhysicsCategory(rawValue: UInt32.max)
-    static let Enemy           = PhysicsCategory(rawValue: 0b0001)
-    static let Projectile      = PhysicsCategory(rawValue: 0b0010)
-    static let Wall            = PhysicsCategory(rawValue: 0b0100)
-    static let Player          = PhysicsCategory(rawValue: 0b1000)
+    static let Enemy           = PhysicsCategory(rawValue: 0b0001) //1
+    static let Projectile      = PhysicsCategory(rawValue: 0b0010) //2
+    static let Wall            = PhysicsCategory(rawValue: 0b0100) //4
+    static let Player          = PhysicsCategory(rawValue: 0b1000) //8
 }
 
 class GameScene: SKScene
@@ -77,17 +77,19 @@ class GameScene: SKScene
     var initPos: CGPoint = CGPoint.zero
     var initTouch: CGPoint = CGPoint.zero
     var currentDimension: DimensionFace = .front
+    var wallTimer = 0
+    var time = Date()
     
     let projectileSpeed: Double = 0.5 //smaller number is faster
     let moveAmtthreshold: CGFloat = 100.0
+    let playerSpeed: CGFloat = 5
+    let shootDelay: TimeInterval = 0.25
 
     let bgColor = SKColor(red: 0.23, green: 0.0, blue: 0.0, alpha: 1.0)
     let wallColor = UIColor(red: 0.90, green: 0.0, blue: 0.0, alpha: 1.0)
     
-    var wallTimer = 0
-    
     var calibrate: Double!
-    
+    var doneCalibrate = false
     var motionManager: CMMotionManager!
     
     var collidedCounter = 0
@@ -109,11 +111,6 @@ class GameScene: SKScene
         
         motionManager = CMMotionManager()
         motionManager.startAccelerometerUpdates()
-        
-        if let accelerometerData = motionManager.accelerometerData
-        {
-            calibrate = accelerometerData.acceleration.x
-        }
         
         run(SKAction.repeatForever(
             SKAction.sequence([
@@ -139,34 +136,42 @@ class GameScene: SKScene
                 SKAction.wait(forDuration: 1.0)
             ])
         ))
-        
-        //run(SKAction.run({self.addWall(dimension: .front)}))
     }
     
     override func update(_ currentTime: TimeInterval)
     {
-        
-        
         #if targetEnvironment(simulator)
         #else
-        
         if let accelerometerData = motionManager.accelerometerData
         {
-            var changed = accelerometerData.acceleration.x //+ calibrate
-            print(changed)
+            if doneCalibrate != true
+            {
+                calibrate = accelerometerData.acceleration.x
+                doneCalibrate = true
+            }
             
-            physicsWorld.gravity = CGVector(dx: accelerometerData.acceleration.y * 0, dy: changed * 10)
+            if accelerometerData.acceleration.x > calibrate + 0.03
+            {
+                player.position.y -= playerSpeed
+            }
+            
+            if accelerometerData.acceleration.x < calibrate - 0.015
+            {
+                player.position.y += playerSpeed
+            }
         }
         
-        if player.position.y <= 0
+        if player.position.y <= 0 + player.size.height / 2
         {
-            player.position.y = 0
+            player.position.y = 0 + player.size.height / 2
         }
         
-        if player.position.y >= size.height - player.size.height
+        if player.position.y >= size.height - player.size.height / 2
         {
-            player.position.y = size.height - player.size.height
+            player.position.y = size.height - player.size.height / 2
         }
+        
+        print(player.position)
         #endif
     }
     
@@ -248,13 +253,13 @@ class GameScene: SKScene
         let actualDuration = 4.0
         let actionMove = SKAction.move(to: CGPoint(x: -1000, y:0), duration: TimeInterval(actualDuration))
         let actionMoveDone = SKAction.removeFromParent()
-        let actionResetTimer = SKAction.run {
+        let actionResetTimer = SKAction.run
+        {
             self.wallTimer = 0
         }
         
         wall.run(SKAction.sequence([actionMove, actionMoveDone, actionResetTimer]))
     }
-    
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?)
     {
@@ -295,16 +300,19 @@ class GameScene: SKScene
                 print("Moving to front")
                 switchDimension(toDimension: .front)
             }
-            
         }
         else
         {
-            shoot(dimension: currentDimension)
+            shoot(dimension: currentDimension, after: shootDelay)
         }
     }
     
-    func shoot(dimension: DimensionFace)
+    func shoot(dimension: DimensionFace, after timeInterval: Double)
     {
+        guard Date() - timeInterval > time else {
+            return
+        }
+        
         let projectile = SKSpriteNode(imageNamed:"Antibody")
         projectile.position = player.position
         projectile.name = "editable"
@@ -327,6 +335,8 @@ class GameScene: SKScene
         let actionMove = SKAction.move(to: realDest, duration: projectileSpeed)
         let actionMoveDone = SKAction.removeFromParent()
         projectile.run(SKAction.sequence([actionRotate, actionMove, actionMoveDone]))
+        
+        time = Date()
     }
     
     func switchDimension(toDimension: DimensionFace)
