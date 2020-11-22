@@ -57,6 +57,16 @@ enum DimensionFace: CGFloat
     case null  = 10
 }
 
+struct WallType : OptionSet
+{
+    let rawValue: UInt8
+    init(rawValue: UInt8) {self.rawValue = rawValue}
+    
+    static let longThin     = WallType(rawValue: 0b01)
+    static let shortWideBot = WallType(rawValue: 0b10)
+    static let shortWideTop = WallType(rawValue: 0b11)
+}
+
 struct PhysicsCategory : OptionSet
 {
     let rawValue: UInt32
@@ -73,6 +83,7 @@ struct PhysicsCategory : OptionSet
 class GameScene: SKScene
 {
     let player = SKSpriteNode(imageNamed: "BCell")
+    let scoreText = SKLabelNode(fontNamed: "ArialMT")
     
     let bgColor = SKColor(red: 0.23, green: 0.0, blue: 0.0, alpha: 1.0)
     let wallColor = UIColor(red: 0.90, green: 0.0, blue: 0.0, alpha: 1.0)
@@ -87,6 +98,8 @@ class GameScene: SKScene
     var wallTimer = 0
     var time = Date()
     var tutorialDone : Bool = false
+    var rotate = false
+    var score: Int = 0
     
     let projectileSpeed: Double = 0.5 //smaller number is faster
     let moveAmtthreshold: CGFloat = 100.0
@@ -109,6 +122,12 @@ class GameScene: SKScene
         player.Dimension = currentDimension
         
         addChild(player)
+        
+        scoreText.position = CGPoint(x: size.width/2, y: 0)
+        scoreText.fontColor = SKColor.white
+        scoreText.text = "Score: \(score)"
+        
+        addChild(scoreText)
         
         motionManager = CMMotionManager()
         motionManager.startAccelerometerUpdates()
@@ -139,13 +158,28 @@ class GameScene: SKScene
         ))*/
     }
     
+    var sentWave: Bool = false
+    
     override func update(_ currentTime: TimeInterval)
     {
         #if targetEnvironment(simulator)
         #else
         playerMovement()
         
+        /*if(!tutorialDone)
+        {
+            tutorial()
+        }*/
+        
+        if !sentWave
+        {
+            waveType1()
+            sentWave = true
+        }
+        
+        updateScore()
         print(player.position)
+        
         #endif
     }
     
@@ -195,23 +229,35 @@ class GameScene: SKScene
         }
     }
     
+    var movementDone: Bool = false
+    var shootDone: Bool = false
+    var changeDimen: Bool = false
+    var setCurrPlayerPos: Bool = false
+    var currentPlayerPos: CGFloat = 0
+    
     func tutorial()
     {
-        var movementDone: Bool = false
-        var shootDone: Bool = false
-        var changeDimen: Bool = false
-        
         if(!movementDone)
         {
+            if(!setCurrPlayerPos)
+            {
+                currentPlayerPos = player.position.y
+                setCurrPlayerPos = true
+            }
+            
+            print("movement tutorial")
             let moveText = SKLabelNode(fontNamed: "Chalkduster")
             moveText.text = "Tilt up and down to move up"
             moveText.fontSize = 65
             moveText.fontColor = SKColor.white
             moveText.position = CGPoint(x: frame.midX + 100, y: frame.midY)
             
-            if(player.position.y >= player.position.y + 100)
+            addChild(moveText)
+            
+            if(player.position.y >= currentPlayerPos - 150)
             {
                 movementDone = true
+                print("move up done")
             }
             
         }
@@ -226,15 +272,15 @@ class GameScene: SKScene
                 calibrated = accelerometerData.acceleration.x
                 doneCalibrate = true
             }
-            
+        
             if accelerometerData.acceleration.x > calibrated + 0.035
             {
-                player.position.y -= playerSpeed
+                player.position.y += playerSpeed
             }
             
             if accelerometerData.acceleration.x < calibrated - 0.02
             {
-                player.position.y += playerSpeed
+                player.position.y -= playerSpeed
             }
         }
         
@@ -259,13 +305,11 @@ class GameScene: SKScene
         return random() * (max - min) + min
     }
     
-    func addEnemy(dimension: DimensionFace)
+    func addEnemy(dimension: DimensionFace, y: CGFloat = 0, duration: CGFloat = 0)
     {
         let enemy = SKSpriteNode(imageNamed: "RedVirus")
         
         enemy.name = "editable"
-        
-        let y = random(min: enemy.size.height/2, max: size.height - enemy.size.height/2)
         
         enemy.position = CGPoint(x: size.width + enemy.size.width/2, y: y)
         enemy.Dimension = dimension
@@ -288,21 +332,39 @@ class GameScene: SKScene
             enemy.alpha = 0.5
         }
 
-        let actualDuration = random(min: CGFloat(2.0), max: CGFloat(4.0))
-        let actionMove = SKAction.move(to: CGPoint(x: -enemy.size.width/2, y: y), duration: TimeInterval(actualDuration))
+        let actionMove = SKAction.move(to: CGPoint(x: -enemy.size.width/2, y: y), duration: TimeInterval(duration))
+        let removeScore = SKAction.run {
+            self.score -= 50
+        }
         let actionMoveDone = SKAction.removeFromParent()
         
-        enemy.run(SKAction.sequence([actionMove, actionMoveDone]))
+        enemy.run(SKAction.sequence([actionMove, removeScore, actionMoveDone]))
     }
     
-    func addWall(dimension: DimensionFace)
+    func addWall(dimension: DimensionFace, wallType: WallType)
     {
-        let wallRect = CGRect(x:0, y:0, width: 100, height: size.height)
+        var wallRect: CGRect = CGRect(x:0, y:0, width:0, height:0)
+        var y: CGFloat = 0
+        if wallType == .longThin
+        {
+            wallRect = CGRect(x:0, y:0, width: 100, height: size.height)
+            y = 0
+        }
+        else if wallType == .shortWideBot
+        {
+            wallRect = CGRect(x:0, y:0, width: 1000, height: size.height/2)
+            y = size.height/2
+        }
+        else if wallType == .shortWideTop
+        {
+            wallRect = CGRect(x:0, y:0, width: 1000, height: size.height/2)
+            y = 0
+        }
+        
         let wall = SKShapeNode(rect: wallRect)
-        
+    
         wall.name = "editable"
-        
-        wall.position = CGPoint(x: size.width + 1000, y: 0)
+        wall.position = CGPoint(x: size.width + wallRect.size.width, y: y)
         wall.fillColor = wallColor
         wall.Dimension = dimension
         
@@ -324,11 +386,13 @@ class GameScene: SKScene
         }
         
         let actualDuration = 4.0
-        let actionMove = SKAction.move(to: CGPoint(x: -1000, y:0), duration: TimeInterval(actualDuration))
+        let actionMove = SKAction.move(to: CGPoint(x: -size.width - wallRect.width, y: y), duration: TimeInterval(actualDuration))
         let actionMoveDone = SKAction.removeFromParent()
         let actionResetTimer = SKAction.run
         {
+            print(self.wallTimer)
             self.wallTimer = 0
+            print(self.wallTimer)
         }
         
         wall.run(SKAction.sequence([actionMove, actionMoveDone, actionResetTimer]))
@@ -401,6 +465,30 @@ class GameScene: SKScene
         }
     }
     
+    func waveType1()
+    {
+        run(SKAction.sequence([
+            SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y, duration: 2.0)}),
+            SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y + 100, duration: 2.0)}),
+            SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y + 200, duration: 2.0)}),
+            SKAction.wait(forDuration: 2.0),
+            SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y, duration: 3.0)}),
+            SKAction.wait(forDuration: 3.0),
+            SKAction.run({self.addWall(dimension: self.currentDimension, wallType: .shortWideTop)}),
+            SKAction.wait(forDuration: 2.0),
+            SKAction.run({self.addWall(dimension: self.currentDimension, wallType: .shortWideBot)}),
+            SKAction.wait(forDuration: 2.0),
+            SKAction.run({self.addWall(dimension: self.currentDimension, wallType: .longThin)}),
+            SKAction.wait(forDuration: 2.0),
+            SKAction.run({self.sentWave = false})
+        ]))
+    }
+    
+    func updateScore()
+    {
+        scoreText.text = "Score: \(score)"
+    }
+    
     func PlayerDied()
     {
         print("Oh no you dead!")
@@ -414,13 +502,15 @@ class GameScene: SKScene
     {
         collidedCounter += 1
         print("Player Collided #\(collidedCounter)")
-        //PlayerDied()
+        PlayerDied()
     }
     
     func collidedEnemyWithProjectile(Enemy: SKSpriteNode, Projectile: SKSpriteNode)
     {
         Enemy.removeFromParent()
         Projectile.removeFromParent()
+        
+        score += 100
         
         collidedCounter += 1
         print("Projectile Collided #\(collidedCounter)")
@@ -540,7 +630,7 @@ extension GameScene: SKPhysicsContactDelegate
             
             if contactCategory.contains([.Wall, .Player])
             {
-                //PlayerDied()
+                PlayerDied()
             }
         }
         
