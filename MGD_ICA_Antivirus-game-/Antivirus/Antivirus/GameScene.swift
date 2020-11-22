@@ -73,24 +73,25 @@ struct PhysicsCategory : OptionSet
 class GameScene: SKScene
 {
     let player = SKSpriteNode(imageNamed: "BCell")
+    
+    let bgColor = SKColor(red: 0.23, green: 0.0, blue: 0.0, alpha: 1.0)
+    let wallColor = UIColor(red: 0.90, green: 0.0, blue: 0.0, alpha: 1.0)
+    
+    var motionManager: CMMotionManager!
+    var calibrated: Double!
+    var doneCalibrate = false
     var moveAmtY: CGFloat = 0
     var initPos: CGPoint = CGPoint.zero
     var initTouch: CGPoint = CGPoint.zero
     var currentDimension: DimensionFace = .front
     var wallTimer = 0
     var time = Date()
+    var tutorialDone : Bool = false
     
     let projectileSpeed: Double = 0.5 //smaller number is faster
     let moveAmtthreshold: CGFloat = 100.0
     let playerSpeed: CGFloat = 5
     let shootDelay: TimeInterval = 0.25
-
-    let bgColor = SKColor(red: 0.23, green: 0.0, blue: 0.0, alpha: 1.0)
-    let wallColor = UIColor(red: 0.90, green: 0.0, blue: 0.0, alpha: 1.0)
-    
-    var calibrate: Double!
-    var doneCalibrate = false
-    var motionManager: CMMotionManager!
     
     var collidedCounter = 0
     
@@ -112,7 +113,7 @@ class GameScene: SKScene
         motionManager = CMMotionManager()
         motionManager.startAccelerometerUpdates()
         
-        run(SKAction.repeatForever(
+        /*run(SKAction.repeatForever(
             SKAction.sequence([
                 SKAction.run({
                     let i = self.random(min:0.0, max:5.0)
@@ -135,130 +136,17 @@ class GameScene: SKScene
                 }),
                 SKAction.wait(forDuration: 1.0)
             ])
-        ))
+        ))*/
     }
     
     override func update(_ currentTime: TimeInterval)
     {
         #if targetEnvironment(simulator)
         #else
-        if let accelerometerData = motionManager.accelerometerData
-        {
-            if doneCalibrate != true
-            {
-                calibrate = accelerometerData.acceleration.x
-                doneCalibrate = true
-            }
-            
-            if accelerometerData.acceleration.x > calibrate + 0.03
-            {
-                player.position.y -= playerSpeed
-            }
-            
-            if accelerometerData.acceleration.x < calibrate - 0.015
-            {
-                player.position.y += playerSpeed
-            }
-        }
-        
-        if player.position.y <= 0 + player.size.height / 2
-        {
-            player.position.y = 0 + player.size.height / 2
-        }
-        
-        if player.position.y >= size.height - player.size.height / 2
-        {
-            player.position.y = size.height - player.size.height / 2
-        }
+        playerMovement()
         
         print(player.position)
         #endif
-    }
-    
-    func random() -> CGFloat
-    {
-        return CGFloat(Float(arc4random()) / 0xFFFFFFFF)
-    }
-    
-    func random(min: CGFloat, max: CGFloat) -> CGFloat
-    {
-        return random() * (max - min) + min
-    }
-    
-    func addEnemy(dimension: DimensionFace)
-    {
-        let enemy = SKSpriteNode(imageNamed: "RedVirus")
-        
-        enemy.name = "editable"
-        
-        let actualY = random(min: enemy.size.height/2, max: size.height - enemy.size.height/2)
-        //let actualY = player.position.y
-        
-        enemy.position = CGPoint(x: size.width + enemy.size.width/2, y:actualY )
-        enemy.Dimension = dimension
-        
-        addChild(enemy)
-        
-        enemy.physicsBody = SKPhysicsBody(circleOfRadius: enemy.size.width/2)
-        enemy.physicsBody!.isDynamic = true
-        enemy.physicsBody!.affectedByGravity = false
-        enemy.physicsBody!.category = .Enemy
-        enemy.physicsBody!.collision = .None
-        enemy.physicsBody!.contact = .Player
-        
-        if(currentDimension == dimension)
-        {
-            enemy.alpha = 1.0
-        }
-        else
-        {
-            enemy.alpha = 0.5
-        }
-
-        let actualDuration = random(min: CGFloat(2.0), max: CGFloat(4.0))
-        let actionMove = SKAction.move(to: CGPoint(x: -enemy.size.width/2, y:actualY), duration: TimeInterval(actualDuration))
-        let actionMoveDone = SKAction.removeFromParent()
-        
-        enemy.run(SKAction.sequence([actionMove, actionMoveDone]))
-    }
-    
-    func addWall(dimension: DimensionFace)
-    {
-        let wallRect = CGRect(x:0, y:0, width: 100, height: size.height)
-        let wall = SKShapeNode(rect: wallRect)
-        
-        wall.name = "editable"
-        
-        wall.position = CGPoint(x: size.width + 1000, y: 0)
-        wall.fillColor = wallColor
-        wall.Dimension = dimension
-        
-        addChild(wall)
-        
-        wall.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: wallRect.width, height: wallRect.height), center: CGPoint(x: wallRect.width / 2, y: wallRect.height / 2))
-        wall.physicsBody!.affectedByGravity = false
-        wall.physicsBody!.category = .Wall
-        wall.physicsBody!.collision = .None
-        wall.physicsBody!.contact = .Player
-        
-        if(currentDimension == dimension)
-        {
-            wall.alpha = 1.0
-        }
-        else
-        {
-            wall.alpha = 0.5
-        }
-        
-        let actualDuration = 4.0
-        let actionMove = SKAction.move(to: CGPoint(x: -1000, y:0), duration: TimeInterval(actualDuration))
-        let actionMoveDone = SKAction.removeFromParent()
-        let actionResetTimer = SKAction.run
-        {
-            self.wallTimer = 0
-        }
-        
-        wall.run(SKAction.sequence([actionMove, actionMoveDone, actionResetTimer]))
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?)
@@ -307,13 +195,153 @@ class GameScene: SKScene
         }
     }
     
+    func tutorial()
+    {
+        var movementDone: Bool = false
+        var shootDone: Bool = false
+        var changeDimen: Bool = false
+        
+        if(!movementDone)
+        {
+            let moveText = SKLabelNode(fontNamed: "Chalkduster")
+            moveText.text = "Tilt up and down to move up"
+            moveText.fontSize = 65
+            moveText.fontColor = SKColor.white
+            moveText.position = CGPoint(x: frame.midX + 100, y: frame.midY)
+            
+            if(player.position.y >= player.position.y + 100)
+            {
+                movementDone = true
+            }
+            
+        }
+    }
+    
+    func playerMovement()
+    {
+        if let accelerometerData = motionManager.accelerometerData
+        {
+            if doneCalibrate != true
+            {
+                calibrated = accelerometerData.acceleration.x
+                doneCalibrate = true
+            }
+            
+            if accelerometerData.acceleration.x > calibrated + 0.035
+            {
+                player.position.y -= playerSpeed
+            }
+            
+            if accelerometerData.acceleration.x < calibrated - 0.02
+            {
+                player.position.y += playerSpeed
+            }
+        }
+        
+        if player.position.y <= 0 + player.size.height / 2
+        {
+            player.position.y = 0 + player.size.height / 2
+        }
+        
+        if player.position.y >= size.height - player.size.height / 2
+        {
+            player.position.y = size.height - player.size.height / 2
+        }
+    }
+    
+    func random() -> CGFloat
+    {
+        return CGFloat(Float(arc4random()) / Float(0xFFFFFFFF))
+    }
+    
+    func random(min: CGFloat, max: CGFloat) -> CGFloat
+    {
+        return random() * (max - min) + min
+    }
+    
+    func addEnemy(dimension: DimensionFace)
+    {
+        let enemy = SKSpriteNode(imageNamed: "RedVirus")
+        
+        enemy.name = "editable"
+        
+        let y = random(min: enemy.size.height/2, max: size.height - enemy.size.height/2)
+        
+        enemy.position = CGPoint(x: size.width + enemy.size.width/2, y: y)
+        enemy.Dimension = dimension
+        
+        addChild(enemy)
+        
+        enemy.physicsBody = SKPhysicsBody(circleOfRadius: enemy.size.width/2)
+        enemy.physicsBody!.isDynamic = true
+        enemy.physicsBody!.affectedByGravity = false
+        enemy.physicsBody!.category = .Enemy
+        enemy.physicsBody!.collision = .None
+        enemy.physicsBody!.contact = .Player
+        
+        if(currentDimension == dimension)
+        {
+            enemy.alpha = 1.0
+        }
+        else
+        {
+            enemy.alpha = 0.5
+        }
+
+        let actualDuration = random(min: CGFloat(2.0), max: CGFloat(4.0))
+        let actionMove = SKAction.move(to: CGPoint(x: -enemy.size.width/2, y: y), duration: TimeInterval(actualDuration))
+        let actionMoveDone = SKAction.removeFromParent()
+        
+        enemy.run(SKAction.sequence([actionMove, actionMoveDone]))
+    }
+    
+    func addWall(dimension: DimensionFace)
+    {
+        let wallRect = CGRect(x:0, y:0, width: 100, height: size.height)
+        let wall = SKShapeNode(rect: wallRect)
+        
+        wall.name = "editable"
+        
+        wall.position = CGPoint(x: size.width + 1000, y: 0)
+        wall.fillColor = wallColor
+        wall.Dimension = dimension
+        
+        addChild(wall)
+        
+        wall.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: wallRect.width, height: wallRect.height), center: CGPoint(x: wallRect.width / 2, y: wallRect.height / 2))
+        wall.physicsBody!.affectedByGravity = false
+        wall.physicsBody!.category = .Wall
+        wall.physicsBody!.collision = .None
+        wall.physicsBody!.contact = .Player
+        
+        if(currentDimension == dimension)
+        {
+            wall.alpha = 1.0
+        }
+        else
+        {
+            wall.alpha = 0.5
+        }
+        
+        let actualDuration = 4.0
+        let actionMove = SKAction.move(to: CGPoint(x: -1000, y:0), duration: TimeInterval(actualDuration))
+        let actionMoveDone = SKAction.removeFromParent()
+        let actionResetTimer = SKAction.run
+        {
+            self.wallTimer = 0
+        }
+        
+        wall.run(SKAction.sequence([actionMove, actionMoveDone, actionResetTimer]))
+    }
+    
     func shoot(dimension: DimensionFace, after timeInterval: Double)
     {
         guard Date() - timeInterval > time else {
             return
         }
+
+        let projectile = SKSpriteNode(imageNamed: "Antibody")
         
-        let projectile = SKSpriteNode(imageNamed:"Antibody")
         projectile.position = player.position
         projectile.name = "editable"
         

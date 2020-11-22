@@ -6,16 +6,9 @@
       "size" : "20x20"
     },
     {
-      "filename" : "20pt_iPhone_Notification_3x.png",
       "idiom" : "iphone",
       "scale" : "3x",
       "size" : "20x20"
-    },
-    {
-      "filename" : "29pt_iPad_Settings_1x.png",
-      "idiom" : "iphone",
-      "scale" : "1x",
-      "size" : "29x29"
     },
     {
       "idiom" : "iphone",
@@ -93,7 +86,6 @@
       "size" : "83.5x83.5"
     },
     {
-      "filename" : "1024pt_App_Store_1x.png",
       "idiom" : "ios-marketing",
       "scale" : "1x",
       "size" : "1024x1024"

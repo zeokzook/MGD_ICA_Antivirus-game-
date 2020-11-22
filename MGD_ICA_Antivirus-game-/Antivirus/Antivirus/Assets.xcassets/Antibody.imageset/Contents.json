@@ -1,23 +1,23 @@
 {
   "images" : [
     {
+      "filename" : "_antibody_.png",
       "idiom" : "universal",
-      "filename" : "Antibody-1.png",
       "scale" : "1x"
     },
     {
+      "filename" : "_antibody_@2x.png",
       "idiom" : "universal",
-      "filename" : "Antibody.png",
       "scale" : "2x"
     },
     {
+      "filename" : "_antibody_@3x.png",
       "idiom" : "universal",
-      "filename" : "Antibody-2.png",
       "scale" : "3x"
     }
   ],
   "info" : {
-    "version" : 1,
-    "author" : "xcode"
+    "author" : "xcode",
+    "version" : 1
   }
 }
