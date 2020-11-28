@@ -472,6 +472,7 @@ class GameScene: SKScene
             SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y, duration: 2.0)}),
             SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y + 100, duration: 2.0)}),
             SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y + 200, duration: 2.0)}),
+            SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y + 300, duration: 2.0)}),
             SKAction.wait(forDuration: 2.0),
             SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y, duration: 3.0)}),
             SKAction.wait(forDuration: 3.0),
