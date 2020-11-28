@@ -123,7 +123,8 @@ class GameScene: SKScene
         
         addChild(player)
         
-        scoreText.position = CGPoint(x: size.width/2, y: 0)
+        scoreText.position = CGPoint(x: size.width/2, y: size.height - 25)
+        scoreText.fontSize = 25
         scoreText.fontColor = SKColor.white
         scoreText.text = "Score: \(score)"
         
