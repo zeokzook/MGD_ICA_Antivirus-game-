@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "_antibody.png",
+      "filename" : "moving_strings.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "_antibody@2x.png",
+      "filename" : "moving_strings@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "_antibody@3x.png",
+      "filename" : "moving_strings@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

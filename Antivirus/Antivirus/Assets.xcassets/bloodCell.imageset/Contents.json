@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "_antibody.png",
+      "filename" : "blood_cell.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "_antibody@2x.png",
+      "filename" : "blood_cell@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "_antibody@3x.png",
+      "filename" : "blood_cell@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

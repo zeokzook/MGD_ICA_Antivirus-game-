@@ -82,10 +82,9 @@ struct PhysicsCategory : OptionSet
 
 class GameScene: SKScene
 {
-    let player = SKSpriteNode(imageNamed: "BCell")
+    let player = SKSpriteNode(imageNamed: "whiteCell")
     let scoreText = SKLabelNode(fontNamed: "ArialMT")
     
-    let bgColor = SKColor(red: 0.23, green: 0.0, blue: 0.0, alpha: 1.0)
     let wallColor = UIColor(red: 0.90, green: 0.0, blue: 0.0, alpha: 1.0)
     
     var motionManager: CMMotionManager!
@@ -110,7 +109,7 @@ class GameScene: SKScene
     
     override func didMove(to view: SKView)
     {
-        backgroundColor = bgColor
+        addBackground()
         
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
@@ -230,6 +229,64 @@ class GameScene: SKScene
         }
     }
     
+    func addBackground()
+    {
+        //adding background images
+        let topBG = SKSpriteNode(imageNamed: "topBG")
+        let background = SKSpriteNode(imageNamed: "background")
+        let botBG = SKSpriteNode(imageNamed: "botBG")
+        
+        topBG.position = CGPoint(x: size.width / 2, y: size.height - topBG.size.height / 2)
+        background.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        botBG.position = CGPoint(x: size.width / 2, y: 0 + botBG.size.height / 2)
+        
+        topBG.zPosition = -9
+        background.zPosition = -10
+        botBG.zPosition = -9
+        
+        addChild(background)
+        addChild(topBG)
+        addChild(botBG)
+        
+        //adding strings
+        let strings = SKSpriteNode(imageNamed: "strings")
+        
+        strings.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        
+        strings.zPosition = -9
+        
+        addChild(strings)
+        
+        //adding background blood cells
+        run(SKAction.repeatForever(
+            SKAction.sequence([
+                SKAction.run({
+                    self.addBloodCells()
+                }),
+                SKAction.wait(forDuration: 1.0)
+            ])))
+    }
+    
+    func addBloodCells()
+    {
+        let bloodCell = SKSpriteNode(imageNamed: "bloodCell")
+        
+        let y = random(min: 0 + bloodCell.size.height / 2, max: size.height - bloodCell.size.height / 2)
+        bloodCell.position = CGPoint(x: size.width + bloodCell.size.width/2, y: y)
+        
+        bloodCell.zPosition = -8
+        
+        bloodCell.alpha = 0.5
+        
+        addChild(bloodCell)
+        
+        let duration = random(min: 3.0, max: 5.0)
+        let actionMove = SKAction.move(to: CGPoint(x: bloodCell.position.x - (size.width + bloodCell.size.width), y: y), duration: TimeInterval(duration))
+        let actionDone = SKAction.removeFromParent()
+        
+        bloodCell.run(SKAction.sequence([actionMove, actionDone]))
+    }
+    
     var movementDone: Bool = false
     var shootDone: Bool = false
     var changeDimen: Bool = false
@@ -308,7 +365,15 @@ class GameScene: SKScene
     
     func addEnemy(dimension: DimensionFace, y: CGFloat = 0, duration: CGFloat = 0)
     {
-        let enemy = SKSpriteNode(imageNamed: "RedVirus")
+        var enemy = SKSpriteNode()
+        if dimension == .front
+        {
+            enemy = SKSpriteNode(imageNamed: "virus")
+        }
+        else if dimension == .back
+        {
+            enemy = SKSpriteNode(imageNamed: "infectedCell")
+        }
         
         enemy.name = "editable"
         
@@ -342,7 +407,7 @@ class GameScene: SKScene
         enemy.run(SKAction.sequence([actionMove, removeScore, actionMoveDone]))
     }
     
-    func addWall(dimension: DimensionFace, wallType: WallType)
+    func addWall(dimension: DimensionFace, wallType: WallType, wallDuration: CGFloat)
     {
         var wallRect: CGRect = CGRect(x:0, y:0, width:0, height:0)
         var y: CGFloat = 0
@@ -386,17 +451,10 @@ class GameScene: SKScene
             wall.alpha = 0.5
         }
         
-        let actualDuration = 4.0
-        let actionMove = SKAction.move(to: CGPoint(x: -size.width - wallRect.width, y: y), duration: TimeInterval(actualDuration))
+        let actionMove = SKAction.move(to: CGPoint(x: -size.width - wallRect.width, y: y), duration: TimeInterval(wallDuration))
         let actionMoveDone = SKAction.removeFromParent()
-        let actionResetTimer = SKAction.run
-        {
-            print(self.wallTimer)
-            self.wallTimer = 0
-            print(self.wallTimer)
-        }
         
-        wall.run(SKAction.sequence([actionMove, actionMoveDone, actionResetTimer]))
+        wall.run(SKAction.sequence([actionMove, actionMoveDone]))
     }
     
     func shoot(dimension: DimensionFace, after timeInterval: Double)
@@ -405,7 +463,7 @@ class GameScene: SKScene
             return
         }
 
-        let projectile = SKSpriteNode(imageNamed: "Antibody")
+        let projectile = SKSpriteNode(imageNamed: "antibody")
         
         projectile.position = player.position
         projectile.name = "editable"
@@ -476,11 +534,11 @@ class GameScene: SKScene
             SKAction.wait(forDuration: 2.0),
             SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y, duration: 3.0)}),
             SKAction.wait(forDuration: 3.0),
-            SKAction.run({self.addWall(dimension: self.currentDimension, wallType: .shortWideTop)}),
+            SKAction.run({self.addWall(dimension: self.currentDimension, wallType: .shortWideTop, wallDuration: 4.0)}),
             SKAction.wait(forDuration: 2.0),
-            SKAction.run({self.addWall(dimension: self.currentDimension, wallType: .shortWideBot)}),
+            SKAction.run({self.addWall(dimension: self.currentDimension, wallType: .shortWideBot, wallDuration: 4.0)}),
             SKAction.wait(forDuration: 2.0),
-            SKAction.run({self.addWall(dimension: self.currentDimension, wallType: .longThin)}),
+            SKAction.run({self.addWall(dimension: self.currentDimension, wallType: .longThin, wallDuration: 4.0)}),
             SKAction.wait(forDuration: 2.0),
             SKAction.run({self.sentWave = false})
         ]))
