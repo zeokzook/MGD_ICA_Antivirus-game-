@@ -15,6 +15,23 @@ class GameViewController: UIViewController
     override func viewDidLoad()
     {
         super.viewDidLoad()
+        
+        /*if let view = self.view as! SKView?
+        {
+            if let scene = MainMenu(fileNamed:"MainMenu")
+            {
+
+                scene.scaleMode = .aspectFill
+                
+                view.presentScene(scene)
+            }
+            
+            view.ignoresSiblingOrder = true
+            view.showsFPS = true
+            view.showsNodeCount = true
+            view.showsPhysics = true
+        }*/
+        
         let scene = GameScene(size: view.bounds.size)
         let skView = view as! SKView
         skView.ignoresSiblingOrder = true

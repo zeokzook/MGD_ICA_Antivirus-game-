@@ -84,8 +84,10 @@ class GameScene: SKScene
 {
     let player = SKSpriteNode(imageNamed: "whiteCell")
     let scoreText = SKLabelNode(fontNamed: "ArialMT")
+    let pauseButton = SKSpriteNode(imageNamed: "pauseButton")
     
-    let wallColor = UIColor(red: 0.90, green: 0.0, blue: 0.0, alpha: 1.0)
+    let wallColorFront = UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+    let wallColorBack = UIColor(red: 1.0, green: 0.612, blue: 0, alpha: 1.0)
     
     var motionManager: CMMotionManager!
     var calibrated: Double!
@@ -94,7 +96,6 @@ class GameScene: SKScene
     var initPos: CGPoint = CGPoint.zero
     var initTouch: CGPoint = CGPoint.zero
     var currentDimension: DimensionFace = .front
-    var wallTimer = 0
     var time = Date()
     var tutorialDone : Bool = false
     var rotate = false
@@ -114,6 +115,7 @@ class GameScene: SKScene
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
         
+        player.scale(to: CGSize(width: 50, height: 50))
         player.position = CGPoint(x: size.width * 0.1, y: size.height * 0.5)
         player.physicsBody = SKPhysicsBody(circleOfRadius: player.size.width/2)
         player.physicsBody!.category = .Player
@@ -129,6 +131,11 @@ class GameScene: SKScene
         
         addChild(scoreText)
         
+        pauseButton.setScale(0.5)
+        pauseButton.position = CGPoint(x: size.width - pauseButton.size.width / 2, y: size.height - pauseButton.size.height / 2)
+        
+        addChild(pauseButton)
+        
         motionManager = CMMotionManager()
         motionManager.startAccelerometerUpdates()
         
@@ -137,11 +144,9 @@ class GameScene: SKScene
                 SKAction.run({
                     let i = self.random(min:0.0, max:5.0)
                     
-                    self.wallTimer += 1
-                    
-                    if(self.wallTimer == 10)
+                    if(i == 0.0)
                     {
-                        self.addWall(dimension: self.currentDimension)
+                        self.addWall(dimension: self.currentDimension, wallType: .shortWideBot, wallDuration: 2.0)
                     }
                     else if(i <= 2.0)
                     {
@@ -173,12 +178,12 @@ class GameScene: SKScene
         
         if !sentWave
         {
-            waveType1()
+            //waveType1()
             sentWave = true
         }
         
         updateScore()
-        print(player.position)
+        //print(player.position)
         
         #endif
     }
@@ -207,6 +212,7 @@ class GameScene: SKScene
     //Shooting
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?)
     {
+        let location = (touches.first?.location(in: self))!
         if moveAmtY < -moveAmtthreshold
         {
             if(currentDimension != .back)
@@ -222,6 +228,10 @@ class GameScene: SKScene
                 print("Moving to front")
                 switchDimension(toDimension: .front)
             }
+        }
+        else if pauseButton.contains(location)
+        {
+            print("pausing")
         }
         else
         {
@@ -377,6 +387,7 @@ class GameScene: SKScene
         
         enemy.name = "editable"
         
+        enemy.scale(to: CGSize(width: 40, height: 40))
         enemy.position = CGPoint(x: size.width + enemy.size.width/2, y: y)
         enemy.Dimension = dimension
         
@@ -431,7 +442,16 @@ class GameScene: SKScene
     
         wall.name = "editable"
         wall.position = CGPoint(x: size.width + wallRect.size.width, y: y)
-        wall.fillColor = wallColor
+        
+        if(dimension == .front)
+        {
+            wall.fillColor = wallColorFront
+        }
+        else
+        {
+            wall.fillColor = wallColorBack
+        }
+        
         wall.Dimension = dimension
         
         addChild(wall)
@@ -524,7 +544,7 @@ class GameScene: SKScene
         }
     }
     
-    func waveType1()
+    /*func waveType1()
     {
         run(SKAction.sequence([
             SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y, duration: 2.0)}),
@@ -542,7 +562,7 @@ class GameScene: SKScene
             SKAction.wait(forDuration: 2.0),
             SKAction.run({self.sentWave = false})
         ]))
-    }
+    }*/
     
     func updateScore()
     {
