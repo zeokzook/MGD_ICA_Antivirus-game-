@@ -16,7 +16,7 @@ class GameViewController: UIViewController
     
     var mainMenu: MainMenu?
     var gameScene: GameScene?
-    var pauseScene: PauseScene?
+    var highScoreScene: HighScoreScene?
     
     override func viewDidLoad()
     {
@@ -26,15 +26,15 @@ class GameViewController: UIViewController
         
         let skView = self.view as! SKView
         
-        /*mainMenu = MainMenu(fileNamed:"MainMenu")
-        mainMenu!.scaleMode = .aspectFill
+        mainMenu = MainMenu(size: view.bounds.size)
+        mainMenu!.scaleMode = .resizeFill
 
-        skView.presentScene(mainMenu)*/
-        
+        skView.presentScene(mainMenu)
+        /*
         gameScene = GameScene(size: view.bounds.size)
         gameScene!.scaleMode = .resizeFill
         
-        skView.presentScene(gameScene)
+        skView.presentScene(gameScene)*/
         
         skView.ignoresSiblingOrder = true
         skView.showsFPS = true
@@ -56,5 +56,25 @@ class GameViewController: UIViewController
         
         let transition = SKTransition.push(with: .down, duration: 0.4)
         skView.presentScene(gameScene!, transition: transition)
+    }
+    
+    func returnMainMenu()
+    {
+        mainMenu = MainMenu(size: view.bounds.size)
+        mainMenu!.scaleMode = .resizeFill
+        let skView = self.view as! SKView
+        
+        let transition = SKTransition.push(with: .right, duration: 0.4)
+        skView.presentScene(mainMenu!, transition: transition)
+    }
+    
+    func toHighScoreScene()
+    {
+        highScoreScene = HighScoreScene(size: view.bounds.size)
+        highScoreScene!.scaleMode = .resizeFill
+        let skView = self.view as! SKView
+        
+        let transition = SKTransition.push(with: .left, duration: 0.4)
+        skView.presentScene(highScoreScene!, transition: transition)
     }
 }

@@ -1,69 +1,50 @@
 //
-//  MainMenu.swift
+//  HighScoreScene.swift
 //  Antivirus
 //
-//  Created by Adam Tan on 07/12/2020.
+//  Created by Adam Tan on 10/12/2020.
 //  Copyright © 2020 TAN, ADAM (Student). All rights reserved.
 //
 
 import Foundation
 import SpriteKit
 
-class MainMenu: SKScene
+class HighScoreScene: SKScene
 {
-    let buttonPlay = SKSpriteNode(imageNamed: "playButton")
-    let buttonHighScore = SKSpriteNode(imageNamed: "highScoreButton")
-    let titleAntivirus = SKLabelNode(fontNamed: "ArialMT")
+    let buttonBack = SKSpriteNode(imageNamed: "backButton")
     
     override func didMove(to view: SKView)
     {
         addBackground()
         
-        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        let titleFontSize: CGFloat = 30
+        let highScoreTitle = SKLabelNode(fontNamed: "ArialMT")
+        highScoreTitle.text = "High Scores"
+        highScoreTitle.fontSize = titleFontSize
+        highScoreTitle.position = CGPoint(x: size.width / 2, y: 0.9 * size.height)
         
-        titleAntivirus.text = "ANTIVIRUS"
-        titleAntivirus.fontSize = 100
-        titleAntivirus.position = CGPoint(x: center.x , y: center.y + 0.2 * size.height)
+        addChild(highScoreTitle)
         
-        addChild(titleAntivirus)
+        buttonBack.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        buttonBack.setScale(0.5)
+        buttonBack.position = CGPoint(x: buttonBack.size.width / 2, y: size.height - buttonBack.size.height / 2)
         
-        buttonPlay.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        //buttonPlay.setScale(0.75)
-        buttonPlay.position = CGPoint(x: center.x - 0.15 * size.width, y: center.y - 0.15 * size.height)
-        
-        addChild(buttonPlay)
-        
-        buttonHighScore.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        //buttonHighScore.setScale(0.75)
-        buttonHighScore.position = CGPoint(x: center.x + 0.15 * size.width, y: center.y - 0.15 * size.height)
-        
-        addChild(buttonHighScore)
-        
+        addChild(buttonBack)
     }
-    
+        
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?)
     {
         let location = (touches.first?.location(in: self))!
         
-        if buttonPlay.contains(location)
+        if buttonBack.contains(location)
         {
-            startGame()
-        }
-        
-        if buttonHighScore.contains(location)
-        {
-            highScore()
+            returnToMainMenu()
         }
     }
     
-    func startGame()
+    func returnToMainMenu()
     {
-        GameViewController.shared.startNewGame()
-    }
-    
-    func highScore()
-    {
-        GameViewController.shared.toHighScoreScene()
+        GameViewController.shared.returnMainMenu()
     }
     
     func random() -> CGFloat

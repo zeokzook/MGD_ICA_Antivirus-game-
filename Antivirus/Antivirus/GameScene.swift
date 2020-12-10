@@ -85,6 +85,7 @@ class GameScene: SKScene
     let player = SKSpriteNode(imageNamed: "whiteCell")
     let scoreText = SKLabelNode(fontNamed: "ArialMT")
     let pauseButton = SKSpriteNode(imageNamed: "pauseButton")
+    var playerAimGuide: SKShapeNode?
     
     let wallColorFront = UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
     let wallColorBack = UIColor(red: 1.0, green: 0.612, blue: 0, alpha: 1.0)
@@ -108,6 +109,9 @@ class GameScene: SKScene
     
     var collidedCounter = 0
     
+    let enemyScore = 100
+    let wallScore = 300
+    
     override func didMove(to view: SKView)
     {
         addBackground()
@@ -118,13 +122,27 @@ class GameScene: SKScene
         
         //Setting up player
         player.scale(to: CGSize(width: 50, height: 50))
+        player.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         player.position = CGPoint(x: size.width * 0.1, y: size.height * 0.5)
+        player.name = "player"
+        player.color = UIColor(red: 1.0, green: 0.612, blue: 0, alpha: 1.0)
         player.physicsBody = SKPhysicsBody(circleOfRadius: player.size.width/2)
         player.physicsBody!.category = .Player
         player.physicsBody!.collision = .None
         player.Dimension = currentDimension
         
         addChild(player)
+        
+        //Setting up playerAimGuide
+        let rect = CGRect(x: 0, y: 0, width: size.width - (player.position.x + (player.size.width / 2)), height: 4)
+        playerAimGuide = SKShapeNode(rect: rect)
+        playerAimGuide?.position = CGPoint(x: player.position.x + (player.size.width / 2), y: player.position.y - rect.height)
+        playerAimGuide?.name = "player"
+        playerAimGuide?.fillColor = .white
+        playerAimGuide?.alpha = 0.6
+        playerAimGuide?.strokeColor = UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
+        
+        //addChild(playerAimGuide!)
         
         //Setting up score text
         scoreText.position = CGPoint(x: size.width/2, y: size.height - 25)
@@ -143,6 +161,8 @@ class GameScene: SKScene
         //Setting up CMMotion
         motionManager = CMMotionManager()
         motionManager.startAccelerometerUpdates()
+        
+        //waveType1()
         
         /*run(SKAction.repeatForever(
             SKAction.sequence([
@@ -183,7 +203,7 @@ class GameScene: SKScene
         
         if !sentWave
         {
-            //waveType1()
+            waveType1()
             sentWave = true
         }
         
@@ -213,8 +233,7 @@ class GameScene: SKScene
         }
         
     }
-
-    //Shooting
+    
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?)
     {
         let location = (touches.first?.location(in: self))!
@@ -244,18 +263,12 @@ class GameScene: SKScene
             }
             else if buttonRecalibrate.contains(location)
             {
-                doneCalibrate = false
+                recalibrate()
             }
             else if buttonExit.contains(location)
             {
-                let scene = MainMenu(fileNamed: "MainMenu")
-                scene!.scaleMode = .aspectFill
-                
-                let transition = SKTransition.push(with: .up, duration: 0.4)
-                self.view?.presentScene(scene!, transition: transition)
+                GameViewController.shared.returnMainMenu()
             }
-            
-            
         }
         else
         {
@@ -270,8 +283,7 @@ class GameScene: SKScene
             }
         }
     }
-    
-    
+
     let buttonCancel = SKSpriteNode(imageNamed: "cancelButton")
     let buttonRecalibrate = SKSpriteNode(color: UIColor(red: 0.937254, green: 0.0, blue: 0.0, alpha: 1.0), size: CGSize(width: 320, height: 60))
     let buttonExit = SKSpriteNode(imageNamed: "exitButton")
@@ -327,6 +339,15 @@ class GameScene: SKScene
 
         addChild(textRecalibrate)
         
+        let textRecalibrateDone = SKLabelNode(fontNamed: "ArialMT")
+        textRecalibrateDone.name = "textRecalibrateDone"
+        textRecalibrateDone.text = "Recalibration Done"
+        textRecalibrateDone.zPosition = zPos
+        textRecalibrateDone.fontSize = textRecalibrateFontSize
+        textRecalibrateDone.position = CGPoint(x: buttonRecalibrate.position.x, y: buttonRecalibrate.position.y + buttonRecalibrate.size.height)
+        
+        addChild(textRecalibrateDone)
+        
         let buttonExitMargin: CGFloat = 0.15 * size.height
         buttonExit.name = "pauseMenu"
         buttonExit.anchorPoint = CGPoint(x: 0.5, y: 0.5)
@@ -336,6 +357,38 @@ class GameScene: SKScene
         
         addChild(buttonExit)
         
+    }
+    
+    func recalibrate()
+    {
+        doneCalibrate = false
+        
+        SKAction.sequence([
+            SKAction.run({self.showDoneText()}),
+            SKAction.wait(forDuration: 0.3),
+            SKAction.run({self.hideDoneText()})
+        ])
+        
+    }
+    
+    func showDoneText()
+    {
+        self.enumerateChildNodes(withName: "textRecalibrateDone")
+        {
+            (node, stop)in
+            
+            node.zPosition = 5
+        }
+    }
+    
+    func hideDoneText()
+    {
+        self.enumerateChildNodes(withName: "textRecalibrateDone")
+        {
+            (node, stop)in
+            
+            node.zPosition = -20
+        }
     }
     
     func pausing()
@@ -354,6 +407,8 @@ class GameScene: SKScene
     func unpause()
     {
         self.isPaused = false
+        
+        hideDoneText()
         
         self.enumerateChildNodes(withName: "pauseMenu")
         {
@@ -470,22 +525,26 @@ class GameScene: SKScene
             if accelerometerData.acceleration.x > calibrated + 0.035
             {
                 player.position.y += playerSpeed
+                playerAimGuide?.position.y += playerSpeed
             }
             
             if accelerometerData.acceleration.x < calibrated - 0.02
             {
                 player.position.y -= playerSpeed
+                playerAimGuide?.position.y -= playerSpeed
             }
         }
         
-        if player.position.y <= 0 + player.size.height / 2
+        if player.position.y <= player.size.height / 2
         {
-            player.position.y = 0 + player.size.height / 2
+            player.position.y = player.size.height / 2
+            playerAimGuide?.position.y = player.size.height / 2
         }
         
         if player.position.y >= size.height - player.size.height / 2
         {
             player.position.y = size.height - player.size.height / 2
+            playerAimGuide?.position.y = size.height - player.size.height / 2
         }
     }
     
@@ -499,7 +558,7 @@ class GameScene: SKScene
         return random() * (max - min) + min
     }
     
-    func addEnemy(dimension: DimensionFace, y: CGFloat = 0, duration: CGFloat = 0)
+    func addEnemy(dimension: DimensionFace,x: CGFloat = 0, y: CGFloat = 0, duration: CGFloat = 0)
     {
         var enemy = SKSpriteNode()
         if dimension == .front
@@ -511,10 +570,11 @@ class GameScene: SKScene
             enemy = SKSpriteNode(imageNamed: "infectedCell")
         }
         
-        enemy.name = "editable"
+        enemy.name = "enemy"
         
         enemy.scale(to: CGSize(width: 40, height: 40))
-        enemy.position = CGPoint(x: size.width + enemy.size.width/2, y: y)
+        enemy.position = CGPoint(x: size.width + enemy.size.width/2 + x, y: y)
+        enemy.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         enemy.Dimension = dimension
         
         addChild(enemy)
@@ -536,12 +596,12 @@ class GameScene: SKScene
         }
 
         let actionMove = SKAction.move(to: CGPoint(x: -enemy.size.width/2, y: y), duration: TimeInterval(duration))
-        let removeScore = SKAction.run {
-            self.score -= 50
-        }
+        let removeScore = SKAction.run { self.score -= self.enemyScore }
         let actionMoveDone = SKAction.removeFromParent()
         
         enemy.run(SKAction.sequence([actionMove, removeScore, actionMoveDone]))
+        
+        //add slow down and go to player
     }
     
     func addWall(dimension: DimensionFace, wallType: WallType, wallDuration: CGFloat)
@@ -566,7 +626,7 @@ class GameScene: SKScene
         
         let wall = SKShapeNode(rect: wallRect)
     
-        wall.name = "editable"
+        wall.name = "wall"
         wall.position = CGPoint(x: size.width + wallRect.size.width, y: y)
         
         if(dimension == .front)
@@ -597,10 +657,11 @@ class GameScene: SKScene
             wall.alpha = 0.5
         }
         
-        let actionMove = SKAction.move(to: CGPoint(x: -size.width - wallRect.width, y: y), duration: TimeInterval(wallDuration))
+        let actionMove = SKAction.move(to: CGPoint(x: -wallRect.width, y: y), duration: TimeInterval(wallDuration))
         let actionMoveDone = SKAction.removeFromParent()
+        let actionAddScore = SKAction.run { self.score += self.wallScore }
         
-        wall.run(SKAction.sequence([actionMove, actionMoveDone]))
+        wall.run(SKAction.sequence([actionMove, actionAddScore ,actionMoveDone]))
     }
     
     func shoot(dimension: DimensionFace, after timeInterval: Double)
@@ -612,7 +673,7 @@ class GameScene: SKScene
         let projectile = SKSpriteNode(imageNamed: "antibody")
         
         projectile.position = player.position
-        projectile.name = "editable"
+        projectile.name = "bullet"
         
         projectile.Dimension = dimension
         
@@ -631,8 +692,8 @@ class GameScene: SKScene
         let actionRotate = SKAction.rotate(byAngle: -(CGFloat.pi)/2, duration: 0)
         let actionMove = SKAction.move(to: realDest, duration: projectileSpeed)
         let actionMoveDone = SKAction.removeFromParent()
-        projectile.run(SKAction.sequence([actionRotate, actionMove, actionMoveDone]))
         
+        projectile.run(SKAction.sequence([actionRotate, actionMove, actionMoveDone]))
         time = Date()
     }
     
@@ -641,36 +702,50 @@ class GameScene: SKScene
         currentDimension = toDimension
         player.Dimension = toDimension
         
-        self.enumerateChildNodes(withName: "editable")
+        if(toDimension == .front)
         {
-            (node, stop)in
+            player.colorBlendFactor = 0.0
+            playerAimGuide?.fillColor = .white
+        }
+        else if(toDimension == .back)
+        {
+            player.colorBlendFactor = 0.8
+            playerAimGuide?.fillColor = UIColor(red: 1.0, green: 0.612, blue: 0.0, alpha: 0.6)
+        }
+        
+        self.enumerateChildNodes(withName: "*")
+        {
+            (node, _)in
             
-            if(toDimension == .front)
+            if(node.name == "enemy" || node.name == "wall" || node.name == "bullet")
             {
-                if node.Dimension == .front
+                if(toDimension == .front)
                 {
-                    node.alpha = 1.0
+                    if node.Dimension == .front
+                    {
+                        node.alpha = 1.0
+                    }
+                    else
+                    {
+                        node.alpha = 0.5
+                    }
                 }
-                else
+                else if(toDimension == .back)
                 {
-                    node.alpha = 0.5
-                }
-            }
-            else if(toDimension == .back)
-            {
-                if node.Dimension == .front
-                {
-                    node.alpha = 0.5
-                }
-                else
-                {
-                    node.alpha = 1.0
+                    if node.Dimension == .front
+                    {
+                        node.alpha = 0.5
+                    }
+                    else
+                    {
+                        node.alpha = 1.0
+                    }
                 }
             }
         }
     }
     
-    /*func waveType1()
+    func tutorialWave()
     {
         run(SKAction.sequence([
             SKAction.run({self.addEnemy(dimension: self.currentDimension, y: self.player.position.y, duration: 2.0)}),
@@ -688,7 +763,89 @@ class GameScene: SKScene
             SKAction.wait(forDuration: 2.0),
             SKAction.run({self.sentWave = false})
         ]))
-    }*/
+    }
+    
+    func waveType1()
+    {
+        let dur: CGFloat = 2.5
+        let screenHeight = size.height
+        let screenYCenter = size.height / 2
+        
+        var oppositeDimension: DimensionFace
+        var curDimension: DimensionFace
+        if currentDimension == .front
+        {
+            curDimension = .front
+            oppositeDimension = .back
+        }
+        else
+        {
+            curDimension = .back
+            oppositeDimension = .front
+        }
+        
+        run(SKAction.sequence([
+            /* e = enemy, w = wall
+             *                e4                 ||      e7
+             *        e2                         ||              e9
+             *                                   ||          e8
+             *    e1                    e6       w1                       e11
+             *                                   ||                  e10
+             *            e3                     ||                                 e13
+             *                      e5           ||                            e12
+             * <---------curDimension------------><--------------------oppositeDimension
+             */
+            SKAction.run({self.addEnemy(dimension: curDimension, y: screenYCenter, duration: dur )}),                             //e1
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: curDimension, y: screenYCenter + (0.15 * screenHeight), duration: dur )}),     //e2
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: curDimension, y: screenYCenter - (0.15 * screenHeight), duration: dur )}),     //e3
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: curDimension, y: screenYCenter + (0.30 * screenHeight), duration: dur )}),     //e4
+            SKAction.wait(forDuration: 2),
+            SKAction.run({self.addEnemy(dimension: curDimension, y: screenYCenter - (0.30 * screenHeight), duration: dur )}),     //e5
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: curDimension, y: screenYCenter, duration: dur )}),                             //e6
+            SKAction.wait(forDuration: 2.0),
+            SKAction.run({self.addWall(dimension: curDimension, wallType: .longThin, wallDuration: dur)}),                        //w1
+            SKAction.wait(forDuration: 2.5),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: screenYCenter + (0.40 * screenHeight), duration: dur)}), //e7
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: screenYCenter + (0.15 * screenHeight), duration: dur)}), //e8
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: screenYCenter + (0.30 * screenHeight), duration: dur)}), //e9
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: screenYCenter - (0.15 * screenHeight), duration: dur)}), //e10
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: screenYCenter, duration: dur)}),                         //e11
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: screenYCenter - (0.40 * screenHeight), duration: dur)}), //e12
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: screenYCenter - (0.30 * screenHeight), duration: dur)}), //e13
+            //for testing purposes only
+            SKAction.wait(forDuration: 2.0),
+            SKAction.run({self.sentWave = false})
+            
+        ]))
+        
+        
+        
+    }
+    
+    func waveType2()
+    {
+        
+    }
+    
+    func waveType3()
+    {
+        
+    }
+    
+    func waveType4()
+    {
+        
+    }
     
     func updateScore()
     {
@@ -697,6 +854,7 @@ class GameScene: SKScene
     
     func PlayerDied()
     {
+        player.removeFromParent()
         print("Oh no you dead!")
         
         let reveal = SKTransition.flipHorizontal(withDuration: 0.5)
@@ -706,8 +864,9 @@ class GameScene: SKScene
     
     func collidedEnemyWithPlayer(Enemy: SKSpriteNode, Player: SKSpriteNode)
     {
-        collidedCounter += 1
-        print("Player Collided #\(collidedCounter)")
+        Enemy.removeFromParent()
+        Player.removeFromParent()
+        
         PlayerDied()
     }
     
@@ -716,10 +875,7 @@ class GameScene: SKScene
         Enemy.removeFromParent()
         Projectile.removeFromParent()
         
-        score += 100
-        
-        collidedCounter += 1
-        print("Projectile Collided #\(collidedCounter)")
+        score += enemyScore
     }
     
 }
@@ -834,11 +990,10 @@ extension GameScene: SKPhysicsContactDelegate
             }
             
             
-            if contactCategory.contains([.Wall, .Player])
+            if contactCategory.contains([.Player, .Wall])
             {
                 PlayerDied()
             }
         }
-        
     }
 }
