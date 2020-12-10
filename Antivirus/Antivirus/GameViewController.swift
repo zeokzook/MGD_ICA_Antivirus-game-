@@ -12,38 +12,49 @@ import GameplayKit
 
 class GameViewController: UIViewController
 {
+    static var shared: GameViewController!
+    
+    var mainMenu: MainMenu?
+    var gameScene: GameScene?
+    var pauseScene: PauseScene?
+    
     override func viewDidLoad()
     {
         super.viewDidLoad()
         
-        /*if let view = self.view as! SKView?
-        {
-            if let scene = MainMenu(fileNamed:"MainMenu")
-            {
-
-                scene.scaleMode = .aspectFill
-                
-                view.presentScene(scene)
-            }
-            
-            view.ignoresSiblingOrder = true
-            view.showsFPS = true
-            view.showsNodeCount = true
-            view.showsPhysics = true
-        }*/
+        GameViewController.shared = self
         
-        let scene = GameScene(size: view.bounds.size)
-        let skView = view as! SKView
+        let skView = self.view as! SKView
+        
+        /*mainMenu = MainMenu(fileNamed:"MainMenu")
+        mainMenu!.scaleMode = .aspectFill
+
+        skView.presentScene(mainMenu)*/
+        
+        gameScene = GameScene(size: view.bounds.size)
+        gameScene!.scaleMode = .resizeFill
+        
+        skView.presentScene(gameScene)
+        
         skView.ignoresSiblingOrder = true
         skView.showsFPS = true
-        //skView.showsPhysics = true
         skView.showsNodeCount = true
-        scene.scaleMode = .resizeFill
-        skView.presentScene(scene)
+        skView.showsPhysics = true
+        
     }
     
     override var prefersStatusBarHidden: Bool
     {
-      return true
+        return true
+    }
+    
+    func startNewGame()
+    {
+        gameScene = GameScene(size: view.bounds.size)
+        gameScene!.scaleMode = .resizeFill
+        let skView = self.view as! SKView
+        
+        let transition = SKTransition.push(with: .down, duration: 0.4)
+        skView.presentScene(gameScene!, transition: transition)
     }
 }

@@ -17,25 +17,13 @@ class MainMenu: SKScene
     {
         buttonPlay = self.childNode(withName: "buttonPlay") as! btn
         
-        buttonPlay.function = { self.loadGame() }
+        buttonPlay.function = { self.startGame() }
     }
     
-    func loadGame()
+    func startGame()
     {
-        guard let view = self.view as SKView? else
-        {
-            print("Failed to get SKView")
-            return
-        }
-        
-        let scene = GameScene(size: view.bounds.size)
-        scene.scaleMode = .resizeFill
-        
-        view.showsDrawCount = true
-        view.showsFPS = true
-        
-        let transition = SKTransition.reveal(with: .up, duration: 1.0)
-        
-        view.presentScene(scene, transition: transition)
+        print("Loading Game")
+        //self.GameView
+        GameViewController.shared.startNewGame()
     }
 }

@@ -111,10 +111,12 @@ class GameScene: SKScene
     override func didMove(to view: SKView)
     {
         addBackground()
+        setupPauseMenu()
         
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
         
+        //Setting up player
         player.scale(to: CGSize(width: 50, height: 50))
         player.position = CGPoint(x: size.width * 0.1, y: size.height * 0.5)
         player.physicsBody = SKPhysicsBody(circleOfRadius: player.size.width/2)
@@ -124,6 +126,7 @@ class GameScene: SKScene
         
         addChild(player)
         
+        //Setting up score text
         scoreText.position = CGPoint(x: size.width/2, y: size.height - 25)
         scoreText.fontSize = 25
         scoreText.fontColor = SKColor.white
@@ -131,11 +134,13 @@ class GameScene: SKScene
         
         addChild(scoreText)
         
+        //Setting up pause button
         pauseButton.setScale(0.5)
         pauseButton.position = CGPoint(x: size.width - pauseButton.size.width / 2, y: size.height - pauseButton.size.height / 2)
         
         addChild(pauseButton)
         
+        //Setting up CMMotion
         motionManager = CMMotionManager()
         motionManager.startAccelerometerUpdates()
         
@@ -229,16 +234,136 @@ class GameScene: SKScene
                 switchDimension(toDimension: .front)
             }
         }
-        else if pauseButton.contains(location)
+        else if self.isPaused
         {
-            print("pausing")
+            
+            if buttonCancel.contains(location)
+            {
+                print("unpausing")
+                unpause()
+            }
+            else if buttonRecalibrate.contains(location)
+            {
+                doneCalibrate = false
+            }
+            else if buttonExit.contains(location)
+            {
+                let scene = MainMenu(fileNamed: "MainMenu")
+                scene!.scaleMode = .aspectFill
+                
+                let transition = SKTransition.push(with: .up, duration: 0.4)
+                self.view?.presentScene(scene!, transition: transition)
+            }
+            
+            
         }
         else
         {
-            shoot(dimension: currentDimension, after: shootDelay)
+            if pauseButton.contains(location) && !self.isPaused
+            {
+                print("pausing")
+                pausing()
+            }
+            else
+            {
+                shoot(dimension: currentDimension, after: shootDelay)
+            }
         }
     }
     
+    
+    let buttonCancel = SKSpriteNode(imageNamed: "cancelButton")
+    let buttonRecalibrate = SKSpriteNode(color: UIColor(red: 0.937254, green: 0.0, blue: 0.0, alpha: 1.0), size: CGSize(width: 320, height: 60))
+    let buttonExit = SKSpriteNode(imageNamed: "exitButton")
+    
+    //PAUSE MENU
+    func setupPauseMenu()
+    {
+        let zPos: CGFloat = -20
+        
+        let backgroundFade = SKSpriteNode(color: .black, size: CGSize(width: size.width, height: size.height))
+        backgroundFade.name = "pauseMenu"
+        backgroundFade.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        backgroundFade.zPosition = zPos
+        backgroundFade.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        backgroundFade.alpha = 0.6
+        
+        addChild(backgroundFade)
+        
+        let pauseTextFontSize: CGFloat = 50
+        let pauseTextMargin: CGFloat = 0.05 * size.height
+        let pauseText = SKLabelNode(fontNamed: "ArialMT")
+        pauseText.name = "pauseMenu"
+        pauseText.text = "Paused"
+        pauseText.zPosition = zPos
+        pauseText.fontSize = pauseTextFontSize
+        pauseText.position = CGPoint(x: size.width / 2, y: size.height - pauseTextFontSize - pauseTextMargin)
+
+        addChild(pauseText)
+        
+        buttonCancel.name = "pauseMenu"
+        buttonCancel.anchorPoint = CGPoint(x: 1.0, y: 1.0)
+        buttonCancel.zPosition = zPos
+        buttonCancel.position = CGPoint(x: size.width, y: size.height)
+        buttonCancel.setScale(0.5)
+        
+        addChild(buttonCancel)
+        
+        let buttonRecalibrateMargin: CGFloat = 0.15 * size.height
+        buttonRecalibrate.name = "pauseMenu"
+        buttonRecalibrate.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        buttonRecalibrate.zPosition = zPos
+        buttonRecalibrate.position = CGPoint(x: size.width / 2, y: size.height / 2 + buttonRecalibrateMargin)
+        
+        addChild(buttonRecalibrate)
+        
+        let textRecalibrateFontSize: CGFloat = 30
+        let textRecalibrate = SKLabelNode(fontNamed: "ArialMT")
+        textRecalibrate.name = "pauseMenu"
+        textRecalibrate.text = "Recalibrate Movement"
+        textRecalibrate.zPosition = zPos
+        textRecalibrate.fontSize = textRecalibrateFontSize
+        textRecalibrate.position = CGPoint(x: buttonRecalibrate.position.x, y: buttonRecalibrate.position.y - textRecalibrateFontSize / 2)
+
+        addChild(textRecalibrate)
+        
+        let buttonExitMargin: CGFloat = 0.15 * size.height
+        buttonExit.name = "pauseMenu"
+        buttonExit.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        buttonExit.zPosition = zPos
+        buttonExit.position = CGPoint(x: size.width / 2, y: size.height / 2 - buttonExitMargin)
+        buttonExit.setScale(0.5)
+        
+        addChild(buttonExit)
+        
+    }
+    
+    func pausing()
+    {
+        self.isPaused = true
+        
+        self.enumerateChildNodes(withName: "pauseMenu")
+        {
+            (node, stop)in
+            
+            node.zPosition = 5
+        }
+        
+    }
+    
+    func unpause()
+    {
+        self.isPaused = false
+        
+        self.enumerateChildNodes(withName: "pauseMenu")
+        {
+            (node, stop)in
+            
+            node.zPosition = -20
+        }
+    }
+    
+    //BACKGROUND
     func addBackground()
     {
         //adding background images
@@ -296,6 +421,7 @@ class GameScene: SKScene
         
         bloodCell.run(SKAction.sequence([actionMove, actionDone]))
     }
+    //BACKGROUND END
     
     var movementDone: Bool = false
     var shootDone: Bool = false
