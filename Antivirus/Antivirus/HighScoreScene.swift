@@ -13,11 +13,19 @@ class HighScoreScene: SKScene
 {
     let buttonBack = SKSpriteNode(imageNamed: "backButton")
     
+    let defaults = UserDefaults.standard
+    
     override func didMove(to view: SKView)
     {
         addBackground()
         
-        let titleFontSize: CGFloat = 30
+        buttonBack.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        buttonBack.setScale(0.5)
+        buttonBack.position = CGPoint(x: buttonBack.size.width / 2, y: size.height - buttonBack.size.height / 2)
+        
+        addChild(buttonBack)
+        
+        let titleFontSize: CGFloat = 50
         let highScoreTitle = SKLabelNode(fontNamed: "ArialMT")
         highScoreTitle.text = "High Scores"
         highScoreTitle.fontSize = titleFontSize
@@ -25,11 +33,29 @@ class HighScoreScene: SKScene
         
         addChild(highScoreTitle)
         
-        buttonBack.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        buttonBack.setScale(0.5)
-        buttonBack.position = CGPoint(x: buttonBack.size.width / 2, y: size.height - buttonBack.size.height / 2)
-        
-        addChild(buttonBack)
+        var highScores: [Int]
+        if let savedHighScores = defaults.object(forKey: "High Scores") as? [Int]
+        {
+            highScores = savedHighScores
+            
+            let highScoreFontSize: CGFloat = 30
+            let highScore1 = SKLabelNode(fontNamed: "ArialMT")
+            highScore1.text = "#1 - \(highScores.last ?? 0)"
+            highScore1.fontSize = highScoreFontSize
+            highScore1.position = CGPoint(x: size.width / 2, y: 0.75 * size.height)
+            
+            addChild(highScore1)
+        }
+        else
+        {
+            let noScoreFontSize: CGFloat = 30
+            let noScore = SKLabelNode(fontNamed: "ArialMT")
+            noScore.text = "No score yet :( Go Play!"
+            noScore.fontSize = noScoreFontSize
+            noScore.position = CGPoint(x: size.width / 2, y: 0.75 * size.height)
+            
+            addChild(noScore)
+        }
     }
         
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?)
@@ -44,7 +70,7 @@ class HighScoreScene: SKScene
     
     func returnToMainMenu()
     {
-        GameViewController.shared.returnMainMenu()
+        GameViewController.shared.returnMainMenu(from: "High Score")
     }
     
     func random() -> CGFloat

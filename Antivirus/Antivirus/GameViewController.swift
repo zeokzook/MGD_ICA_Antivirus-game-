@@ -18,6 +18,8 @@ class GameViewController: UIViewController
     var gameScene: GameScene?
     var highScoreScene: HighScoreScene?
     
+    let defaults = UserDefaults.standard
+    
     override func viewDidLoad()
     {
         super.viewDidLoad()
@@ -58,13 +60,23 @@ class GameViewController: UIViewController
         skView.presentScene(gameScene!, transition: transition)
     }
     
-    func returnMainMenu()
+    func returnMainMenu(from: String)
     {
         mainMenu = MainMenu(size: view.bounds.size)
         mainMenu!.scaleMode = .resizeFill
         let skView = self.view as! SKView
         
-        let transition = SKTransition.push(with: .right, duration: 0.4)
+        var transitionDir: SKTransitionDirection = .up
+        if(from == "High Score")
+        {
+            transitionDir = .right
+        }
+        else if(from == "Game")
+        {
+            transitionDir = .up
+        }
+        
+        let transition = SKTransition.push(with: transitionDir, duration: 0.4)
         skView.presentScene(mainMenu!, transition: transition)
     }
     

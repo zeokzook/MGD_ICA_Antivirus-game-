@@ -80,11 +80,16 @@ struct PhysicsCategory : OptionSet
     static let Player          = PhysicsCategory(rawValue: 0b1000) //8
 }
 
+extension Notification.Name
+{
+    static let notifPause = Notification.Name("notifPause")
+}
+
 class GameScene: SKScene
 {
     let player = SKSpriteNode(imageNamed: "whiteCell")
     let scoreText = SKLabelNode(fontNamed: "ArialMT")
-    let pauseButton = SKSpriteNode(imageNamed: "pauseButton")
+    let buttonPause = SKSpriteNode(imageNamed: "pauseButton")
     var playerAimGuide: SKShapeNode?
     
     let wallColorFront = UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
@@ -101,6 +106,8 @@ class GameScene: SKScene
     var tutorialDone : Bool = false
     var rotate = false
     var score: Int = 0
+    var hasPaused: Bool = false
+    static var gameOver: Bool = false
     
     let projectileSpeed: Double = 0.5 //smaller number is faster
     let moveAmtthreshold: CGFloat = 100.0
@@ -114,8 +121,11 @@ class GameScene: SKScene
     
     override func didMove(to view: SKView)
     {
+        NotificationCenter.default.addObserver(self, selector: #selector(notifPause), name: .notifPause , object: nil)
+        
         addBackground()
         setupPauseMenu()
+        setupGameOver()
         
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
@@ -153,16 +163,14 @@ class GameScene: SKScene
         addChild(scoreText)
         
         //Setting up pause button
-        pauseButton.setScale(0.5)
-        pauseButton.position = CGPoint(x: size.width - pauseButton.size.width / 2, y: size.height - pauseButton.size.height / 2)
+        buttonPause.setScale(0.5)
+        buttonPause.position = CGPoint(x: size.width - buttonPause.size.width / 2, y: size.height - buttonPause.size.height / 2)
         
-        addChild(pauseButton)
+        addChild(buttonPause)
         
         //Setting up CMMotion
         motionManager = CMMotionManager()
         motionManager.startAccelerometerUpdates()
-        
-        //waveType1()
         
         /*run(SKAction.repeatForever(
             SKAction.sequence([
@@ -194,22 +202,33 @@ class GameScene: SKScene
     {
         #if targetEnvironment(simulator)
         #else
-        playerMovement()
         
-        /*if(!tutorialDone)
+        if hasPaused
         {
-            tutorial()
-        }*/
-        
-        if !sentWave
-        {
-            waveType1()
-            sentWave = true
+            pausing()
         }
-        
-        updateScore()
-        //print(player.position)
-        
+        else if GameScene.gameOver
+        {
+            didGameOver()
+        }
+        else
+        {
+            playerMovement()
+            
+            /*if(!tutorialDone)
+            {
+                tutorial()
+            }*/
+            
+            if !sentWave
+            {
+                waveType1()
+                sentWave = true
+            }
+            
+            updateScore()
+            //print(player.position)
+        }
         #endif
     }
     
@@ -239,7 +258,7 @@ class GameScene: SKScene
         let location = (touches.first?.location(in: self))!
         if moveAmtY < -moveAmtthreshold
         {
-            if(currentDimension != .back)
+            if currentDimension != .back
             {
                 print("Moving to back")
                 switchDimension(toDimension: .back)
@@ -247,13 +266,13 @@ class GameScene: SKScene
         }
         else if moveAmtY > moveAmtthreshold
         {
-            if(currentDimension != .front)
+            if currentDimension != .front
             {
                 print("Moving to front")
                 switchDimension(toDimension: .front)
             }
         }
-        else if self.isPaused
+        else if hasPaused
         {
             
             if buttonCancel.contains(location)
@@ -263,16 +282,29 @@ class GameScene: SKScene
             }
             else if buttonRecalibrate.contains(location)
             {
+                print("recalibrated")
                 recalibrate()
             }
-            else if buttonExit.contains(location)
+            else if buttonExitPause.contains(location)
             {
-                GameViewController.shared.returnMainMenu()
+                GameViewController.shared.returnMainMenu(from: "Game")
+            }
+        }
+        else if GameScene.gameOver
+        {
+            if buttonRestart.contains(location)
+            {
+                restartGame()
+            }
+            else if buttonExitGameOver.contains(location)
+            {
+                GameScene.gameOver = false
+                GameViewController.shared.returnMainMenu(from: "Game")
             }
         }
         else
         {
-            if pauseButton.contains(location) && !self.isPaused
+            if buttonPause.contains(location)
             {
                 print("pausing")
                 pausing()
@@ -283,12 +315,13 @@ class GameScene: SKScene
             }
         }
     }
-
-    let buttonCancel = SKSpriteNode(imageNamed: "cancelButton")
-    let buttonRecalibrate = SKSpriteNode(color: UIColor(red: 0.937254, green: 0.0, blue: 0.0, alpha: 1.0), size: CGSize(width: 320, height: 60))
-    let buttonExit = SKSpriteNode(imageNamed: "exitButton")
     
     //PAUSE MENU
+    let buttonCancel = SKSpriteNode(imageNamed: "cancelButton")
+    let buttonRecalibrate = SKSpriteNode(color: UIColor(red: 0.937254, green: 0.0, blue: 0.0, alpha: 1.0), size: CGSize(width: 320, height: 60))
+    let buttonExitPause = SKSpriteNode(imageNamed: "exitButton")
+    let textRecalibrateDone = SKLabelNode(fontNamed: "ArialMT")
+    
     func setupPauseMenu()
     {
         let zPos: CGFloat = -20
@@ -339,8 +372,6 @@ class GameScene: SKScene
 
         addChild(textRecalibrate)
         
-        let textRecalibrateDone = SKLabelNode(fontNamed: "ArialMT")
-        textRecalibrateDone.name = "textRecalibrateDone"
         textRecalibrateDone.text = "Recalibration Done"
         textRecalibrateDone.zPosition = zPos
         textRecalibrateDone.fontSize = textRecalibrateFontSize
@@ -349,51 +380,41 @@ class GameScene: SKScene
         addChild(textRecalibrateDone)
         
         let buttonExitMargin: CGFloat = 0.15 * size.height
-        buttonExit.name = "pauseMenu"
-        buttonExit.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        buttonExit.zPosition = zPos
-        buttonExit.position = CGPoint(x: size.width / 2, y: size.height / 2 - buttonExitMargin)
-        buttonExit.setScale(0.5)
+        buttonExitPause.name = "pauseMenu"
+        buttonExitPause.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        buttonExitPause.zPosition = zPos
+        buttonExitPause.position = CGPoint(x: size.width / 2, y: size.height / 2 - buttonExitMargin)
+        buttonExitPause.setScale(0.5)
         
-        addChild(buttonExit)
-        
+        addChild(buttonExitPause)
     }
-    
+
     func recalibrate()
     {
         doneCalibrate = false
-        
-        SKAction.sequence([
-            SKAction.run({self.showDoneText()}),
-            SKAction.wait(forDuration: 0.3),
-            SKAction.run({self.hideDoneText()})
-        ])
-        
+        showDoneText()
     }
     
     func showDoneText()
     {
-        self.enumerateChildNodes(withName: "textRecalibrateDone")
-        {
-            (node, stop)in
-            
-            node.zPosition = 5
-        }
+        textRecalibrateDone.zPosition = 5
     }
     
     func hideDoneText()
     {
-        self.enumerateChildNodes(withName: "textRecalibrateDone")
-        {
-            (node, stop)in
-            
-            node.zPosition = -20
-        }
+        textRecalibrateDone.zPosition = -20
+    }
+    
+    @objc func notifPause()
+    {
+        pausing()
     }
     
     func pausing()
     {
         self.isPaused = true
+        physicsWorld.speed = 0
+        hasPaused = true
         
         self.enumerateChildNodes(withName: "pauseMenu")
         {
@@ -401,12 +422,13 @@ class GameScene: SKScene
             
             node.zPosition = 5
         }
-        
     }
     
     func unpause()
     {
         self.isPaused = false
+        physicsWorld.speed = 1
+        hasPaused = false
         
         hideDoneText()
         
@@ -417,6 +439,158 @@ class GameScene: SKScene
             node.zPosition = -20
         }
     }
+    //PAUSE MENU END
+    
+    //GAME OVER MENU
+    let buttonExitGameOver = SKSpriteNode(imageNamed: "exitButton")
+    let buttonRestart = SKSpriteNode(imageNamed: "restartButton")
+    let endScoreText = SKLabelNode(fontNamed: "ArialMT")
+    
+    func setupGameOver()
+    {
+        let zPos: CGFloat = -20
+        
+        let backgroundFade = SKSpriteNode(color: .black, size: CGSize(width: size.width, height: size.height))
+        backgroundFade.name = "loseMenu"
+        backgroundFade.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        backgroundFade.zPosition = zPos
+        backgroundFade.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        backgroundFade.alpha = 0.6
+        
+        addChild(backgroundFade)
+        
+        let gameOverTextFontSize: CGFloat = 50
+        let gameOverTextMargin: CGFloat = 0.05 * size.height
+        let gameOverText = SKLabelNode(fontNamed: "ArialMT")
+        gameOverText.name = "loseMenu"
+        gameOverText.text = "Game Over!"
+        gameOverText.zPosition = zPos
+        gameOverText.fontSize = gameOverTextFontSize
+        gameOverText.position = CGPoint(x: size.width / 2, y: size.height - gameOverTextFontSize - gameOverTextMargin)
+
+        addChild(gameOverText)
+        
+        let endScoreTextFontSize: CGFloat = 40
+        let endScoreTextMargin: CGFloat = 0.15 * size.height
+        endScoreText.name = "loseMenu"
+        endScoreText.text = "Score: \(score)"
+        endScoreText.zPosition = zPos
+        endScoreText.fontSize = endScoreTextFontSize
+        endScoreText.position = CGPoint(x: size.width / 2, y: size.height / 2 + endScoreTextMargin)
+        
+        addChild(endScoreText)
+        
+        let buttonExitMargin: CGFloat = 0.15 * size.height
+        buttonExitGameOver.name = "loseMenu"
+        buttonExitGameOver.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        buttonExitGameOver.zPosition = zPos
+        buttonExitGameOver.position = CGPoint(x: size.width / 2 - buttonExitMargin, y: size.height / 2 - buttonExitMargin)
+        buttonExitGameOver.setScale(0.5)
+        
+        addChild(buttonExitGameOver)
+        
+        let buttonRestartMargin: CGFloat = 0.15 * size.height
+        buttonRestart.name = "loseMenu"
+        buttonRestart.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        buttonRestart.zPosition = zPos
+        buttonRestart.position = CGPoint(x: size.width / 2 + buttonRestartMargin, y: size.height / 2 - buttonRestartMargin)
+        buttonRestart.setScale(0.5)
+        
+        addChild(buttonRestart)
+    }
+    
+    func didGameOver()
+    {
+        print("Game Over!")
+        
+        self.isPaused = true
+        physicsWorld.speed = 0
+        GameScene.gameOver = true
+        endScoreText.text = "Score: \(score)"
+        
+        player.removeFromParent()
+        scoreText.removeFromParent()
+        
+        self.enumerateChildNodes(withName: "loseMenu")
+        {
+            (node, stop)in
+            
+            node.zPosition = 5
+        }
+        
+        sortHighScore()
+    }
+    
+    func restartGame()
+    {
+        print("Restarting")
+        
+        self.isPaused = false
+        physicsWorld.speed = 1
+        GameScene.gameOver = false
+        sentWave = false
+        
+        removeAllActions()
+        
+        player.position = CGPoint(x: size.width * 0.1, y: size.height * 0.5)
+        addChild(player)
+        
+        addChild(scoreText)
+        
+        self.enumerateChildNodes(withName: "*")
+        {
+            (node, _)in
+            
+            if node.name == "enemy" || node.name == "wall" || node.name == "bullet"
+            {
+                node.removeFromParent()
+            }
+            else if node.name == "loseMenu"
+            {
+                node.zPosition = -20
+            }
+        }
+    }
+    
+    func sortHighScore()
+    {
+        let defaults = UserDefaults.standard
+        
+        var highScores : [Int]
+        
+        if let savedHighScores = defaults.object(forKey: "High Scores") as? [Int]
+        {
+            print("High Score exists")
+            
+            highScores = savedHighScores
+            
+            if highScores.count == 7
+            {
+                highScores.removeFirst()
+                highScores.append(score)
+                highScores.sort()
+            }
+            else
+            {
+                highScores.append(score)
+                highScores.sort()
+            }
+            
+            defaults.set(highScores, forKey: "High Scores")
+        }
+        else
+        {
+            print("High Score doesnt exists")
+            
+            highScores = [score]
+            
+            defaults.set(highScores, forKey: "High Scores")
+        }
+        
+        score = 0
+        print(highScores)
+    }
+    //GAME OVER END
     
     //BACKGROUND
     func addBackground()
@@ -447,17 +621,23 @@ class GameScene: SKScene
         
         addChild(strings)
         
+        bloodCells()
+    }
+    
+    func bloodCells()
+    {
         //adding background blood cells
         run(SKAction.repeatForever(
             SKAction.sequence([
                 SKAction.run({
-                    self.addBloodCells()
+                    self.addBloodCell()
                 }),
                 SKAction.wait(forDuration: 1.0)
-            ])))
+            ])
+        ))
     }
     
-    func addBloodCells()
+    func addBloodCell()
     {
         let bloodCell = SKSpriteNode(imageNamed: "bloodCell")
         
@@ -478,6 +658,7 @@ class GameScene: SKScene
     }
     //BACKGROUND END
     
+    //TUTORIAL
     var movementDone: Bool = false
     var shootDone: Bool = false
     var changeDimen: Bool = false
@@ -511,7 +692,9 @@ class GameScene: SKScene
             
         }
     }
+    //TUTORIAL END
     
+    //PLAYER MOVEMENT
     func playerMovement()
     {
         if let accelerometerData = motionManager.accelerometerData
@@ -547,6 +730,7 @@ class GameScene: SKScene
             playerAimGuide?.position.y = size.height - player.size.height / 2
         }
     }
+    //PLAYER MOVEMENT END
     
     func random() -> CGFloat
     {
@@ -557,6 +741,9 @@ class GameScene: SKScene
     {
         return random() * (max - min) + min
     }
+    
+    //ADD ENEMY
+    var enemyScale = CGSize(width: 40, height: 40)
     
     func addEnemy(dimension: DimensionFace,x: CGFloat = 0, y: CGFloat = 0, duration: CGFloat = 0)
     {
@@ -572,7 +759,7 @@ class GameScene: SKScene
         
         enemy.name = "enemy"
         
-        enemy.scale(to: CGSize(width: 40, height: 40))
+        enemy.scale(to: enemyScale)
         enemy.position = CGPoint(x: size.width + enemy.size.width/2 + x, y: y)
         enemy.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         enemy.Dimension = dimension
@@ -603,6 +790,7 @@ class GameScene: SKScene
         
         //add slow down and go to player
     }
+    //ADD ENEMY END
     
     func addWall(dimension: DimensionFace, wallType: WallType, wallDuration: CGFloat)
     {
@@ -745,6 +933,12 @@ class GameScene: SKScene
         }
     }
     
+    func updateScore()
+    {
+        scoreText.text = "Score: \(score)"
+    }
+    
+    //WAVES
     func tutorialWave()
     {
         run(SKAction.sequence([
@@ -846,28 +1040,11 @@ class GameScene: SKScene
     {
         
     }
-    
-    func updateScore()
-    {
-        scoreText.text = "Score: \(score)"
-    }
-    
-    func PlayerDied()
-    {
-        player.removeFromParent()
-        print("Oh no you dead!")
-        
-        let reveal = SKTransition.flipHorizontal(withDuration: 0.5)
-        let gameOverScene = GameOverScene(size: self.size, won: false)
-        self.view?.presentScene(gameOverScene, transition: reveal)
-    }
+    //WAVES END
     
     func collidedEnemyWithPlayer(Enemy: SKSpriteNode, Player: SKSpriteNode)
     {
-        Enemy.removeFromParent()
-        Player.removeFromParent()
-        
-        PlayerDied()
+        didGameOver()
     }
     
     func collidedEnemyWithProjectile(Enemy: SKSpriteNode, Projectile: SKSpriteNode)
@@ -992,7 +1169,7 @@ extension GameScene: SKPhysicsContactDelegate
             
             if contactCategory.contains([.Player, .Wall])
             {
-                PlayerDied()
+                didGameOver()
             }
         }
     }
