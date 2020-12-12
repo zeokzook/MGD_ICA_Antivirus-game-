@@ -10,6 +10,8 @@ import UIKit
 import SpriteKit
 import GameplayKit
 
+
+
 class GameViewController: UIViewController
 {
     static var shared: GameViewController!
@@ -88,5 +90,39 @@ class GameViewController: UIViewController
         
         let transition = SKTransition.push(with: .left, duration: 0.4)
         skView.presentScene(highScoreScene!, transition: transition)
+    }
+    
+    @IBAction func showAlertResetHighScore()
+    {
+        let alert = UIAlertController(title: "Resetting High Score", message: "Do you want to reset your high scores?", preferredStyle: UIAlertController.Style.alert)
+
+        alert.addAction(UIAlertAction(title: "Continue", style: UIAlertAction.Style.default, handler: { action in
+            self.defaults.removeObject(forKey: "High Scores")
+            HighScoreScene.shared.resetScores()
+        }))
+        alert.addAction(UIAlertAction(title: "Cancel", style: UIAlertAction.Style.cancel, handler: nil))
+
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    @IBAction func showAlertNoHighScore()
+    {
+        let alert = UIAlertController(title: "No High Score to reset", message: nil, preferredStyle: UIAlertController.Style.alert)
+        alert.addAction(UIAlertAction(title: "Ok", style: UIAlertAction.Style.cancel, handler: nil))
+
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    func resetHighScore()
+    {
+        if let savedHighScores = defaults.object(forKey: "High Scores") as? [Int]
+        {
+            showAlertResetHighScore()
+        }
+        else
+        {
+            showAlertNoHighScore()
+        }
+        
     }
 }

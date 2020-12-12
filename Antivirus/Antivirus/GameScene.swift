@@ -111,7 +111,7 @@ class GameScene: SKScene
     
     let projectileSpeed: Double = 0.5 //smaller number is faster
     let moveAmtthreshold: CGFloat = 100.0
-    let playerSpeed: CGFloat = 5
+    let playerSpeed: CGFloat = 7.5
     let shootDelay: TimeInterval = 0.25
     
     var collidedCounter = 0
@@ -122,6 +122,10 @@ class GameScene: SKScene
     override func didMove(to view: SKView)
     {
         NotificationCenter.default.addObserver(self, selector: #selector(notifPause), name: .notifPause , object: nil)
+        
+        let swipeUp = UISwipeGestureRecognizer(target: self, action: #selector(handleGesture))
+        swipeUp.direction = .up
+        self.view?.addGestureRecognizer(swipeUp)
         
         addBackground()
         setupPauseMenu()
@@ -158,7 +162,7 @@ class GameScene: SKScene
         scoreText.position = CGPoint(x: size.width/2, y: size.height - 25)
         scoreText.fontSize = 25
         scoreText.fontColor = SKColor.white
-        scoreText.text = "Score: \(score)"
+        scoreText.text = "Score: \(String(format: "%010d", score))"
         
         addChild(scoreText)
         
@@ -198,6 +202,18 @@ class GameScene: SKScene
     
     var sentWave: Bool = false
     
+    @objc func handleGesture(gesture: UISwipeGestureRecognizer)
+    {
+        if currentDimension == .front
+        {
+            switchDimension(toDimension: .back)
+        }
+        else if currentDimension == .back
+        {
+            switchDimension(toDimension: .front)
+        }
+    }
+    
     override func update(_ currentTime: TimeInterval)
     {
         #if targetEnvironment(simulator)
@@ -232,49 +248,11 @@ class GameScene: SKScene
         #endif
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?)
-    {
-        if let touch = touches.first as UITouch?
-        {
-            initTouch = touch.location(in: self.scene!.view)
-            moveAmtY = 0
-            initPos = self.position
-        }
-    }
-    
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?)
-    {
-        if let touch = touches.first as UITouch?
-        {
-            let movingPoint: CGPoint = touch.location(in: self.scene!.view)
-            
-            moveAmtY = movingPoint.y - initTouch.y
-        }
-        
-    }
-    
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?)
     {
         let location = (touches.first?.location(in: self))!
-        if moveAmtY < -moveAmtthreshold
+        if hasPaused
         {
-            if currentDimension != .back
-            {
-                print("Moving to back")
-                switchDimension(toDimension: .back)
-            }
-        }
-        else if moveAmtY > moveAmtthreshold
-        {
-            if currentDimension != .front
-            {
-                print("Moving to front")
-                switchDimension(toDimension: .front)
-            }
-        }
-        else if hasPaused
-        {
-            
             if buttonCancel.contains(location)
             {
                 print("unpausing")
@@ -529,13 +507,16 @@ class GameScene: SKScene
         physicsWorld.speed = 1
         GameScene.gameOver = false
         sentWave = false
-        
-        removeAllActions()
+        currentDimension = .front
         
         player.position = CGPoint(x: size.width * 0.1, y: size.height * 0.5)
-        addChild(player)
+        player.Dimension = currentDimension
+        player.colorBlendFactor = 0.0
         
+        addChild(player)
         addChild(scoreText)
+        
+        removeAllActions()
         
         self.enumerateChildNodes(withName: "*")
         {
@@ -564,16 +545,16 @@ class GameScene: SKScene
             
             highScores = savedHighScores
             
-            if highScores.count == 7
+            if highScores.count == 8
             {
-                highScores.removeFirst()
+                highScores.removeLast()
                 highScores.append(score)
-                highScores.sort()
+                highScores.sort(by: >)
             }
             else
             {
                 highScores.append(score)
-                highScores.sort()
+                highScores.sort(by: >)
             }
             
             defaults.set(highScores, forKey: "High Scores")
@@ -582,7 +563,8 @@ class GameScene: SKScene
         {
             print("High Score doesnt exists")
             
-            highScores = [score]
+            highScores = [score,0,0,0,0,0,0,0]
+            highScores.reserveCapacity(8)
             
             defaults.set(highScores, forKey: "High Scores")
         }
@@ -935,7 +917,7 @@ class GameScene: SKScene
     
     func updateScore()
     {
-        scoreText.text = "Score: \(score)"
+        scoreText.text = "Score: \(String(format: "%010d", score))"
     }
     
     //WAVES
@@ -984,10 +966,10 @@ class GameScene: SKScene
              *        e2                         ||              e9
              *                                   ||          e8
              *    e1                    e6       w1                       e11
-             *                                   ||                  e10
-             *            e3                     ||                                 e13
-             *                      e5           ||                            e12
-             * <---------curDimension------------><--------------------oppositeDimension
+             *                                   ||                  e10                      |=========================|
+             *            e3                     ||                                 e13       ||                       ||
+             *                      e5           ||                            e12            ||                       ||
+             * <---------curDimension------------><--------------------oppositeDimension-----------------------------------
              */
             SKAction.run({self.addEnemy(dimension: curDimension, y: screenYCenter, duration: dur )}),                             //e1
             SKAction.wait(forDuration: 1),
