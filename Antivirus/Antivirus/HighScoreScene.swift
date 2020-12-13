@@ -118,6 +118,13 @@ class HighScoreScene: SKScene
     //SETUPS
     func setupScene()
     {
+        let backgroundFade = SKSpriteNode(color: .black, size: CGSize(width: size.width / 2, height: size.height))
+        backgroundFade.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        backgroundFade.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        backgroundFade.alpha = 0.6
+        
+        addChild(backgroundFade)
+        
         buttonBack.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         buttonBack.setScale(0.5)
         buttonBack.position = CGPoint(x: buttonBack.size.width / 2, y: size.height - buttonBack.size.height / 2)
