@@ -98,6 +98,7 @@ class GameScene: SKScene
 {
     let player = SKSpriteNode(imageNamed: "whiteCell")
     let scoreText = SKLabelNode(fontNamed: "ArialMT")
+    let tooLowText = SKLabelNode(fontNamed: "ArialMT")
     let buttonPause = SKSpriteNode(imageNamed: "pauseButton")
     var playerAimGuide: SKShapeNode?
     
@@ -120,20 +121,14 @@ class GameScene: SKScene
     let playerSpeed: CGFloat = 5.0
     let shootDelay: TimeInterval = 0.25
     
-    let difficultyScoreCounterIncrement = 5000
-    var difficultyScoreThreshold: Int = 1500
-    var difficultyScoreDeathThreshold: Int = 3000
-    var difficultyScoreCounter: Int = 0
-    var difficultyDurModifier: CGFloat = 1.0
-    var difficultyScoreModifier: CGFloat = 1.0
-    var difficultyExpectedScore: Int = 0
-    var difficultyEnemyScale: CGFloat = 1.0
-    
     var score: Int = 0
     let enemyScore: Int = 100
     let wallScore: Int = 300
     
     let defaults = UserDefaults.standard
+    
+    //DEBUG
+    let expScoreText = SKLabelNode(fontNamed: "ArialMT")
     
     override func didMove(to view: SKView)
     {
@@ -204,9 +199,35 @@ class GameScene: SKScene
         
         addChild(backgroundFade)
         
+        tooLowText.position = CGPoint(x: scoreText.frame.midX, y: scoreText.frame.minY - 20)
+        tooLowText.fontSize = 20
+        tooLowText.fontColor = SKColor.white
+        tooLowText.zPosition = -20
+        tooLowText.text = "Score too low! Smaller Enemies, More Score"
+        
+        addChild(tooLowText)
+        
+        //DEBUG
+        expScoreText.position = CGPoint(x: size.width/2, y: 25)
+        expScoreText.fontSize = 25
+        expScoreText.fontColor = SKColor.white
+        expScoreText.zPosition = 10
+        expScoreText.text = "Expected: \(String(format: "%010d", difficultyExpectedScore))"
+
+        //addChild(expScoreText)
+        
+        let backgroundFade2 = SKSpriteNode(color: .black, size: CGSize(width: 340, height: 45))
+        backgroundFade2.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        backgroundFade2.zPosition = 9
+        backgroundFade2.position = CGPoint(x: expScoreText.position.x, y: expScoreText.position.y - 10)
+        backgroundFade2.alpha = 0.6
+        
+        //addChild(backgroundFade2)
+        //DEBUG END
+        
         //Setting up pause button
         buttonPause.setScale(0.5)
-        buttonPause.zPosition = 10
+        buttonPause.zPosition = 9
         buttonPause.position = CGPoint(x: size.width - buttonPause.size.width / 2, y: size.height - buttonPause.size.height / 2)
         
         addChild(buttonPause)
@@ -260,19 +281,19 @@ class GameScene: SKScene
                 {
                     /*waveType3()
                     sentWave = true*/
-                    let i = random(min: 0.0, max: 6.0)
+                    let i = random(min: 0.0, max: 7.0)
                     
-                    if i < 2.0
+                    if i < 3.0
                     {
                         waveType1()
                         sentWave = true
                     }
-                    else if i > 2.0 && i < 4.0
+                    else if i > 3.0 && i < 4.0
                     {
                         waveType2()
                         sentWave = true
                     }
-                    else if i > 4.0 && i < 6.0
+                    else if i > 4.0 && i < 7.0
                     {
                         waveType3()
                         sentWave = true
@@ -412,7 +433,7 @@ class GameScene: SKScene
     
     func showDoneText()
     {
-        textRecalibrateDone.zPosition = 10
+        textRecalibrateDone.zPosition = 20
     }
     
     func hideDoneText()
@@ -435,7 +456,7 @@ class GameScene: SKScene
         {
             (node, stop)in
             
-            node.zPosition = 10
+            node.zPosition = 50
         }
     }
     
@@ -549,6 +570,7 @@ class GameScene: SKScene
         
         self.isPaused = false
         physicsWorld.speed = 1
+        doneCalibrate = false
         GameScene.gameOver = false
         sentWave = false
         currentDimension = .front
@@ -957,15 +979,15 @@ class GameScene: SKScene
             
             if(accelerometerData.acceleration.x <= 0)
             {
-                if accelerometerData.acceleration.x > calibrated + 0.035
+                if accelerometerData.acceleration.x > calibrated + 0.015
                 {
-                    let x = (calibrated + 0.085) / accelerometerData.acceleration.x //0.585       0.1
+                    let x = (calibrated + 0.085) / accelerometerData.acceleration.x 
                     let playerSpeedChanged = playerSpeed * CGFloat(x)
                     player.position.y += playerSpeedChanged
                     playerAimGuide?.position.y += playerSpeed * CGFloat(x)
                 }
                 
-                if accelerometerData.acceleration.x < calibrated - 0.02
+                if accelerometerData.acceleration.x < calibrated - 0.03
                 {
                     var x = accelerometerData.acceleration.x / (calibrated - 0.07)
                     if(accelerometerData.acceleration.x < -0.9)
@@ -1049,8 +1071,7 @@ class GameScene: SKScene
         let removeScore = SKAction.run { self.score -= self.enemyScore }
         let actionMoveDone = SKAction.removeFromParent()
         
-        let actualScore = CGFloat(enemyScore) * difficultyScoreModifier
-        difficultyExpectedScore += Int(actualScore)
+        difficultyExpectedScore += enemyScore
         enemy.run(SKAction.sequence([actionMove, removeScore, actionMoveDone]))
     }
     //ADD ENEMY END
@@ -1138,7 +1159,10 @@ class GameScene: SKScene
         let actualDuration = wallDuration * difficultyDurModifier
         let actionMove = SKAction.move(to: CGPoint(x: -wallRect.width, y: y), duration: TimeInterval((actualDuration)))
         let actionMoveDone = SKAction.removeFromParent()
-        let actionAddScore = SKAction.run { self.score += self.wallScore }
+        let actionAddScore = SKAction.run ({
+            let actualScore = CGFloat(self.wallScore) * self.difficultyScoreModifier
+            self.score += Int(actualScore)
+        })
         
         difficultyExpectedScore += wallScore
         wall.run(SKAction.sequence([actionMove, actionAddScore ,actionMoveDone]))
@@ -1151,7 +1175,7 @@ class GameScene: SKScene
             return
         }
 
-        let projectile = SKSpriteNode(imageNamed: "antibody")
+        let projectile = SKSpriteNode(imageNamed: "Antibody")
         
         projectile.position = player.position
         projectile.name = "bullet"
@@ -1240,7 +1264,19 @@ class GameScene: SKScene
     func updateScore()
     {
         scoreText.text = "Score: \(String(format: "%010d", score))"
+        
+        //DEBUG
+        expScoreText.text = "Expected: \(String(format: "%010d", difficultyExpectedScore))"
     }
+    
+    let difficultyScoreCounterIncrement = 5000
+    var difficultyScoreThreshold: Int = 1500
+    var difficultyScoreDeathThreshold: Int = 3000
+    var difficultyScoreCounter: Int = 0
+    var difficultyDurModifier: CGFloat = 1.0
+    var difficultyScoreModifier: CGFloat = 1.0
+    var difficultyExpectedScore: Int = 0
+    var difficultyEnemyScale: CGFloat = 1.0
     
     func difficultyModifier()
     {
@@ -1256,6 +1292,15 @@ class GameScene: SKScene
             print("smaller enemies, more score!")
             difficultyEnemyScale = 0.5
             difficultyScoreModifier = 1.5
+            tooLowText.zPosition = 9
+        }
+        
+        if score > difficultyExpectedScore - difficultyScoreThreshold
+        {
+            print("back to normal")
+            difficultyEnemyScale = 1.0
+            difficultyScoreModifier = 1.0
+            tooLowText.zPosition = -20
         }
         
         if score < difficultyExpectedScore - difficultyScoreDeathThreshold
