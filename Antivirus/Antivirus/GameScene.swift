@@ -6,6 +6,7 @@
 //  Copyright © 2020 TAN, ADAM (Student). All rights reserved.
 //
 
+import AVKit
 import CoreMotion
 import SpriteKit
 import GameplayKit
@@ -136,6 +137,10 @@ class GameScene: SKScene
     
     override func didMove(to view: SKView)
     {
+        let bgm = SKAudioNode(fileNamed: "bgm")
+        bgm.autoplayLooped = true
+        addChild(bgm)
+        
         NotificationCenter.default.addObserver(self, selector: #selector(notifPause), name: .notifPause , object: nil)
         
         let swipeUp = UISwipeGestureRecognizer(target: self, action: #selector(handleGesture))
@@ -552,6 +557,7 @@ class GameScene: SKScene
         difficultyScoreCounter = 0
         difficultyDurModifier = 1.0
         difficultyScoreModifier = 1.0
+        difficultyEnemyScale = 1.0
         difficultyExpectedScore = 0
         
         player.position = CGPoint(x: size.width * 0.1, y: size.height * 0.5)
