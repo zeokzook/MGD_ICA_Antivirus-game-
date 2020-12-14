@@ -78,11 +78,14 @@ struct PhysicsCategory : OptionSet
     
     static let None            = PhysicsCategory([])
     static let All             = PhysicsCategory(rawValue: UInt32.max)
-    static let Enemy           = PhysicsCategory(rawValue: 0b00001) //1
-    static let Projectile      = PhysicsCategory(rawValue: 0b00010) //2
-    static let Wall            = PhysicsCategory(rawValue: 0b00100) //4
-    static let WallAll         = PhysicsCategory(rawValue: 0b01000) //8
-    static let Player          = PhysicsCategory(rawValue: 0b10000) //16
+    static let Enemy           = PhysicsCategory(rawValue: 0b00000001) //1
+    static let EnemyTutorial   = PhysicsCategory(rawValue: 0b00000010) //2
+    static let Projectile      = PhysicsCategory(rawValue: 0b00000100) //4
+    static let Wall            = PhysicsCategory(rawValue: 0b00001000) //8
+    static let WallTutorial    = PhysicsCategory(rawValue: 0b00010000) //16
+    static let WallAll         = PhysicsCategory(rawValue: 0b00100000) //32
+    static let WallAllTutorial = PhysicsCategory(rawValue: 0b01000000) //64
+    static let Player          = PhysicsCategory(rawValue: 0b10000000) //128
 }
 
 extension Notification.Name
@@ -107,9 +110,9 @@ class GameScene: SKScene
     var doneCalibrate = false
     var currentDimension: DimensionFace = .front
     var time = Date()
-    var tutorialDone : Bool = false
-    var hasPaused: Bool = false
-    static var gameOver: Bool = false
+    var tutorialDone = false
+    var hasPaused = false
+    static var gameOver  = false
     
     let projectileSpeed: Double = 0.5 //smaller number is faster
     let moveAmtthreshold: CGFloat = 100.0
@@ -126,8 +129,10 @@ class GameScene: SKScene
     var difficultyEnemyScale: CGFloat = 1.0
     
     var score: Int = 0
-    let enemyScore = 100
-    let wallScore = 300
+    let enemyScore: Int = 100
+    let wallScore: Int = 300
+    
+    let defaults = UserDefaults.standard
     
     override func didMove(to view: SKView)
     {
@@ -140,6 +145,11 @@ class GameScene: SKScene
         let swipeDown = UISwipeGestureRecognizer(target: self, action: #selector(handleGesture))
         swipeDown.direction = .down
         self.view?.addGestureRecognizer(swipeDown)
+        
+        if(!defaults.bool(forKey: "Start Tutorial") || defaults.bool(forKey: "Skip Tutorial"))
+        {
+            setAllTutorialTrue()
+        }
         
         addBackground()
         setupPauseMenu()
@@ -176,14 +186,14 @@ class GameScene: SKScene
         scoreText.position = CGPoint(x: size.width/2, y: size.height - 25)
         scoreText.fontSize = 25
         scoreText.fontColor = SKColor.white
-        scoreText.zPosition = 5
+        scoreText.zPosition = 10
         scoreText.text = "Score: \(String(format: "%010d", score))"
         
         addChild(scoreText)
         
         let backgroundFade = SKSpriteNode(color: .black, size: CGSize(width: 340, height: 45))
         backgroundFade.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        backgroundFade.zPosition = 4
+        backgroundFade.zPosition = 9
         backgroundFade.position = CGPoint(x: scoreText.position.x, y: scoreText.position.y + 10)
         backgroundFade.alpha = 0.6
         
@@ -191,7 +201,7 @@ class GameScene: SKScene
         
         //Setting up pause button
         buttonPause.setScale(0.5)
-        buttonPause.zPosition = 5
+        buttonPause.zPosition = 10
         buttonPause.position = CGPoint(x: size.width - buttonPause.size.width / 2, y: size.height - buttonPause.size.height / 2)
         
         addChild(buttonPause)
@@ -205,13 +215,16 @@ class GameScene: SKScene
     
     @objc func handleGesture(gesture: UISwipeGestureRecognizer)
     {
-        if currentDimension == .front
+        if setupChangeDimenWall
         {
-            switchDimension(toDimension: .back)
-        }
-        else if currentDimension == .back
-        {
-            switchDimension(toDimension: .front)
+            if currentDimension == .front
+            {
+                switchDimension(toDimension: .back)
+            }
+            else if currentDimension == .back
+            {
+                switchDimension(toDimension: .front)
+            }
         }
     }
     
@@ -232,32 +245,35 @@ class GameScene: SKScene
         {
             playerMovement()
             
-            /*if(!tutorialDone)
+            if(!tutorialDone && defaults.bool(forKey: "Start Tutorial") && !defaults.bool(forKey: "Skip Tutorial"))
             {
                 tutorial()
-            }*/
-            
-            if !sentWave
-            {
-                waveType3()
-                sentWave = true
-                
-                /*
-                let i = random(min: 0.0, max: 5.0)
-                
-                if i < 2.5
-                {
-                    waveType1()
-                    sentWave = true
-                }
-                else if i > 2.5
-                {
-                    waveType2()
-                    sentWave = true
-                }*/
-                
             }
-            
+            else
+            {
+                if !sentWave
+                {
+                    /*waveType3()
+                    sentWave = true*/
+                    let i = random(min: 0.0, max: 6.0)
+                    
+                    if i < 2.0
+                    {
+                        waveType1()
+                        sentWave = true
+                    }
+                    else if i > 2.0 && i < 4.0
+                    {
+                        waveType2()
+                        sentWave = true
+                    }
+                    else if i > 4.0 && i < 6.0
+                    {
+                        waveType3()
+                        sentWave = true
+                    }
+                }
+            }
             updateScore()
             //print(player.position)
         }
@@ -303,7 +319,7 @@ class GameScene: SKScene
                 print("pausing")
                 pausing()
             }
-            else
+            else if setupShoot
             {
                 shoot(dimension: currentDimension, after: shootDelay)
             }
@@ -672,43 +688,252 @@ class GameScene: SKScene
     
     //TUTORIAL
     var movementDone: Bool = false
+    var setupMovement: Bool = false
     var shootDone: Bool = false
-    var changeDimen: Bool = false
-    var setCurrPlayerPos: Bool = false
+    var setupShoot: Bool = false
+    var changeDimenWallDone: Bool = false
+    var setupChangeDimenWall: Bool = false
+    var changeDimenEnemyDone: Bool = false
+    var setupChangeDimenEnemy: Bool = false
+    var avoidRedWallsDone: Bool = false
+    var setupRedWalls: Bool = false
     var currentPlayerPos: CGFloat = 0
+    let tutorialText = SKLabelNode(fontNamed: "ArialMT")
     
-    //let backgroundFade
-    func setupTutorial()
+    func setAllTutorialTrue()
     {
+        movementDone = true
+        setupMovement = true
+        shootDone = true
+        setupShoot = true
+        changeDimenWallDone = true
+        setupChangeDimenWall = true
+        changeDimenEnemyDone = true
+        setupChangeDimenEnemy = true
+        avoidRedWallsDone = true
+        setupRedWalls = true
+        tutorialDone = true
+    }
+    
+    let enemyTutorialShoot = SKSpriteNode(imageNamed: "virus")
+    func setupEnemyTutorialShoot()
+    {
+        enemyTutorialShoot.name = "Tutorial"
         
+        enemyTutorialShoot.scale(to: CGSize(width: 40, height: 40))
+        enemyTutorialShoot.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        enemyTutorialShoot.Dimension = .front
+        
+        addChild(enemyTutorialShoot)
+        
+        enemyTutorialShoot.physicsBody = SKPhysicsBody(circleOfRadius: enemyTutorialShoot.size.width/2)
+        enemyTutorialShoot.physicsBody!.isDynamic = true
+        enemyTutorialShoot.physicsBody!.affectedByGravity = false
+        enemyTutorialShoot.physicsBody!.category = .EnemyTutorial
+        enemyTutorialShoot.physicsBody!.collision = .None
+        enemyTutorialShoot.physicsBody!.contact = .Player
+    }
+    
+    func moveEnemyTutorialShoot(duration: CGFloat)
+    {
+        let y = 0.8 * size.height
+        
+        enemyTutorialShoot.position = CGPoint(x: size.width + enemyTutorialShoot.size.width / 2, y: y)
+        
+        let actionMove = SKAction.move(to: CGPoint(x: -enemyTutorialShoot.size.width/2, y: y), duration: TimeInterval(duration))
+        let actionMoveDone = SKAction.move(to: CGPoint(x: size.width + enemyTutorialShoot.size.width / 2, y: y), duration: TimeInterval(0.0))
+        
+        enemyTutorialShoot.run(SKAction.repeatForever(SKAction.sequence([actionMove, actionMoveDone])))
+    }
+    
+    var wallTutorial: SKShapeNode?
+    func setupTutorialChangeWall()
+    {
+        let wallTutorialRect = CGRect(x:0, y:0, width: 100, height: size.height)
+        wallTutorial = SKShapeNode(rect: wallTutorialRect)
+        
+        wallTutorial?.name = "wall"
+        wallTutorial?.Dimension = currentDimension
+        
+        addChild(wallTutorial!)
+        
+        wallTutorial?.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: wallTutorialRect.width, height: wallTutorialRect.height), center: CGPoint(x: wallTutorialRect.width / 2, y: wallTutorialRect.height / 2))
+        wallTutorial?.physicsBody!.affectedByGravity = false
+        wallTutorial?.physicsBody!.collision = .None
+        wallTutorial?.physicsBody!.contact = .Player
+        wallTutorial?.physicsBody!.category = .WallTutorial
+        
+        wallTutorial?.fillColor = wallColorFront
+        wallTutorial?.strokeColor = wallColorFront
+    }
+    
+    func moveTutorialChangeWall(duration: CGFloat)
+    {
+        wallTutorial?.position = CGPoint(x: size.width, y: 0)
+        
+        let actionMove = SKAction.move(to: CGPoint(x: -wallTutorial!.frame.width, y: 0), duration: TimeInterval((duration)))
+        let actionMoveDone = SKAction.run({
+            SKAction.removeFromParent()
+            self.changeDimenWallDone = true
+        })
+        
+        wallTutorial?.run(SKAction.sequence([actionMove ,actionMoveDone]))
+    }
+    
+    let enemyTutorialChange = SKSpriteNode(imageNamed: "virus")
+    func setupTutorialChangeEnemy()
+    {
+        enemyTutorialChange.name = "Tutorial"
+        
+        enemyTutorialChange.scale(to: CGSize(width: 40, height: 40))
+        enemyTutorialChange.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        enemyTutorialChange.Dimension = .front
+        
+        addChild(enemyTutorialChange)
+        
+        enemyTutorialChange.alpha = 0.5
+        
+        enemyTutorialChange.physicsBody = SKPhysicsBody(circleOfRadius: enemyTutorialShoot.size.width/2)
+        enemyTutorialChange.physicsBody!.isDynamic = true
+        enemyTutorialChange.physicsBody!.affectedByGravity = false
+        enemyTutorialChange.physicsBody!.category = .EnemyTutorial
+        enemyTutorialChange.physicsBody!.collision = .None
+        enemyTutorialChange.physicsBody!.contact = .Player
+    }
+    
+    func moveTutorialChangeEnemy(duration: CGFloat)
+    {
+        let y = 0.8 * size.height
+        
+        enemyTutorialChange.position = CGPoint(x: size.width + enemyTutorialChange.size.width / 2, y: y)
+        
+        let actionMove = SKAction.move(to: CGPoint(x: -enemyTutorialChange.size.width/2, y: y), duration: TimeInterval(duration))
+        let actionMoveDone = SKAction.move(to: CGPoint(x: size.width + enemyTutorialChange.size.width / 2, y: y), duration: TimeInterval(0.0))
+        
+        enemyTutorialChange.run(SKAction.repeatForever(SKAction.sequence([actionMove, actionMoveDone])))
+    }
+    
+    var redWallTutorial: SKShapeNode?
+    func setupRedWallTutorial()
+    {
+        let wallTutorialRect = CGRect(x:0, y:0, width: 1000, height: size.height/3)
+        redWallTutorial = SKShapeNode(rect: wallTutorialRect)
+        
+        redWallTutorial?.name = "wall"
+        redWallTutorial?.Dimension = currentDimension
+        
+        addChild(redWallTutorial!)
+        
+        redWallTutorial?.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: wallTutorialRect.width, height: wallTutorialRect.height), center: CGPoint(x: wallTutorialRect.width / 2, y: wallTutorialRect.height / 2))
+        redWallTutorial?.physicsBody!.affectedByGravity = false
+        redWallTutorial?.physicsBody!.collision = .None
+        redWallTutorial?.physicsBody!.contact = .Player
+        redWallTutorial?.physicsBody!.category = .WallAllTutorial
+        
+        redWallTutorial?.fillColor = wallColorAll
+        redWallTutorial?.strokeColor = wallColorAll
+    }
+    
+    func moveRedWallTutorial(duration: CGFloat)
+    {
+        redWallTutorial?.position = CGPoint(x: size.width, y: size.height/3)
+        
+        let actionMove = SKAction.move(to: CGPoint(x: -redWallTutorial!.frame.width, y: size.height/3), duration: TimeInterval((duration)))
+        let actionMoveDone = SKAction.run({
+            SKAction.removeFromParent()
+            self.avoidRedWallsDone = true
+        })
+        
+        redWallTutorial?.run(SKAction.sequence([actionMove ,actionMoveDone]))
     }
     
     func tutorial()
     {
-        setupTutorial()
+        tutorialText.preferredMaxLayoutWidth = 0.6 * size.width
+        tutorialText.lineBreakMode = .byWordWrapping
+        tutorialText.numberOfLines = 3
+        tutorialText.fontSize = 55
+        tutorialText.fontColor = SKColor.white
+        tutorialText.position = CGPoint(x: frame.midX + 100, y: frame.midY)
         
-        if(!movementDone)
+        if !movementDone
         {
-            if(!setCurrPlayerPos)
+            if !setupMovement
             {
+                tutorialText.text = "Tilt up or down to move up or down"
                 currentPlayerPos = player.position.y
-                setCurrPlayerPos = true
+                setupMovement = true
+                addChild(tutorialText)
             }
             
             print("movement tutorial")
-            let moveText = SKLabelNode(fontNamed: "ArialMT")
-            moveText.text = "Tilt up or down to move up or down"
-            moveText.fontSize = 65
-            moveText.fontColor = SKColor.white
-            moveText.position = CGPoint(x: frame.midX + 100, y: frame.midY)
             
-            addChild(moveText)
-            
-            if(player.position.y >= currentPlayerPos + 50 || player.position.y <= currentPlayerPos - 50)
+            if player.position.y >= currentPlayerPos + 150 || player.position.y <= currentPlayerPos - 150
             {
                 movementDone = true
                 print("movement done")
             }
+        }
+        else if !shootDone
+        {
+            if !setupShoot
+            {
+                tutorialText.text = "Move up to the enemy to shoot"
+                setupEnemyTutorialShoot()
+                moveEnemyTutorialShoot(duration: 4.0)
+                setupShoot = true
+            }
+            
+            print("shooting tutorial")
+        }
+        else if !changeDimenWallDone
+        {
+            if !setupChangeDimenWall
+            {
+                tutorialText.text = "Swipe up or down to change colors and to avoid walls of the same color"
+                setupTutorialChangeWall()
+                moveTutorialChangeWall(duration: 4.0)
+                setupChangeDimenWall = true
+            }
+            
+            print("changing dimension tutorial (wall)")
+        }
+        else if !changeDimenEnemyDone
+        {
+            if !setupChangeDimenEnemy
+            {
+                tutorialText.text = "Swipe up or down to attack enemies of the same color!"
+                setupTutorialChangeEnemy()
+                moveTutorialChangeEnemy(duration: 4.0)
+                setupChangeDimenEnemy = true
+            }
+            
+            print("changing dimension tutorial (shoot)")
+        }
+        else if !avoidRedWallsDone
+        {
+            print("Avoid Red Walls tutorial")
+            if !setupRedWalls
+            {
+                tutorialText.text = "Avoid red walls!"
+                setupRedWallTutorial()
+                moveRedWallTutorial(duration: 4.0)
+                setupRedWalls = true
+            }
+            
+        }
+        else if movementDone && shootDone && changeDimenWallDone && changeDimenEnemyDone && avoidRedWallsDone
+        {
+            run(SKAction.sequence([
+                SKAction.run({self.tutorialText.text = "Tutorial Complete! Have fun!"}),
+                SKAction.wait(forDuration: 1.5),
+                SKAction.run({
+                    self.tutorialText.removeFromParent()
+                    self.tutorialDone = true
+                })
+            ]))
+            setAllTutorialTrue()
+            score = 0
         }
     }
     //TUTORIAL END
@@ -775,7 +1000,7 @@ class GameScene: SKScene
     //ADD ENEMY
     var enemyScale = CGSize(width: 40, height: 40)
     
-    func addEnemy(dimension: DimensionFace,x: CGFloat = 0, y: CGFloat = 0, duration: CGFloat = 0)
+    func addEnemy(dimension: DimensionFace, y: CGFloat = 0, duration: CGFloat = 0, name: String = "enemy")
     {
         var enemy = SKSpriteNode()
         if dimension == .front
@@ -787,13 +1012,14 @@ class GameScene: SKScene
             enemy = SKSpriteNode(imageNamed: "infectedCell")
         }
         
-        enemy.name = "enemy"
+        enemy.name = name
         
-        enemy.scale(to: enemyScale)
-        enemy.position = CGPoint(x: size.width + enemy.size.width/2 + x, y: y)
+        let actualScale = CGSize(width: enemyScale.width * difficultyEnemyScale, height: enemyScale.height * difficultyEnemyScale)
+        
+        enemy.scale(to: actualScale)
+        enemy.position = CGPoint(x: size.width + enemy.size.width/2, y: y)
         enemy.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         enemy.Dimension = dimension
-        enemy.setScale(difficultyEnemyScale)
         
         addChild(enemy)
         
@@ -817,10 +1043,9 @@ class GameScene: SKScene
         let removeScore = SKAction.run { self.score -= self.enemyScore }
         let actionMoveDone = SKAction.removeFromParent()
         
-        difficultyExpectedScore += enemyScore
+        let actualScore = CGFloat(enemyScore) * difficultyScoreModifier
+        difficultyExpectedScore += Int(actualScore)
         enemy.run(SKAction.sequence([actionMove, removeScore, actionMoveDone]))
-        
-        //add slow down and go to player
     }
     //ADD ENEMY END
     
@@ -876,6 +1101,7 @@ class GameScene: SKScene
         if affectAll
         {
             wall.fillColor = wallColorAll
+            wall.strokeColor = wallColorAll
             wall.physicsBody!.category = .WallAll
         }
         else
@@ -885,10 +1111,12 @@ class GameScene: SKScene
             if dimension == .front
             {
                 wall.fillColor = wallColorFront
+                wall.strokeColor = wallColorFront
             }
             else if dimension == .back
             {
                 wall.fillColor = wallColorBack
+                wall.strokeColor = wallColorBack
             }
         }
         
@@ -932,7 +1160,15 @@ class GameScene: SKScene
         projectile.physicsBody?.usesPreciseCollisionDetection = true
         projectile.physicsBody!.category = .Projectile
         projectile.physicsBody!.collision = .None
-        projectile.physicsBody!.contact = .Enemy
+        
+        if tutorialDone
+        {
+            projectile.physicsBody!.contact = .Enemy
+        }
+        else
+        {
+            projectile.physicsBody!.contact = .EnemyTutorial
+        }
         
         let shootAmount = projectile.position.x * 10
         let realDest = CGPoint(x: shootAmount, y:0) + projectile.position
@@ -964,7 +1200,7 @@ class GameScene: SKScene
         {
             (node, _)in
             
-            if node.name == "enemy" || node.name == "wall" || node.name == "bullet"
+            if node.name == "enemy" || node.name == "wall" || node.name == "bullet" || node.name == "Tutorial"
             {
                 if node.physicsBody?.category != .WallAll
                 {
@@ -1120,7 +1356,7 @@ class GameScene: SKScene
             SKAction.run({self.addWall(dimension: .null, wallType: .shortWideTop, wallDuration: dur, affectAll: true)}),
             SKAction.wait(forDuration: 2.5),
             SKAction.run({self.addWall(dimension: curDimension, wallType: .longThin, wallDuration: 2.0)}),
-            SKAction.wait(forDuration: 2.5),
+            SKAction.wait(forDuration: 1.5),
             SKAction.run({self.addWall(dimension: .null, wallType: .shorterWideTop, wallDuration: dur, affectAll: true)}),
             SKAction.run({self.addWall(dimension: .null, wallType: .shorterWideBot, wallDuration: dur, affectAll: true)}),
             SKAction.wait(forDuration: 2.5),
@@ -1131,7 +1367,7 @@ class GameScene: SKScene
             SKAction.run({self.addWall(dimension: .null, wallType: .shortWideMid, wallDuration: dur, affectAll: true)}),
             SKAction.wait(forDuration: 2.5),
             SKAction.run({self.addWall(dimension: oppositeDimension, wallType: .longThin, wallDuration: 2.0)}),
-            SKAction.wait(forDuration: 4.0),
+            SKAction.wait(forDuration: 1.5),
             SKAction.run({
                 self.sentWave = false
                 self.difficultyModifier()
@@ -1190,7 +1426,21 @@ class GameScene: SKScene
             SKAction.wait(forDuration: 0.5),
             SKAction.run({self.addEnemy(dimension: curDimension, y: screenYCenter, duration: dur)}),
             SKAction.wait(forDuration: 1.5),
-            SKAction.run({self.addWall(dimension: oppositeDimension, wallType: .longThin, wallDuration: 2.0)}),
+            SKAction.run({self.addWall(dimension: curDimension, wallType: .longThin, wallDuration: 2.0)}),
+            SKAction.wait(forDuration: 0.5),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: 0.20 * screenHeight, duration: dur)}),
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: 0.40 * screenHeight, duration: dur)}),
+            SKAction.wait(forDuration: 0.5),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: 0.60 * screenHeight, duration: dur)}),
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: 0.80 * screenHeight, duration: dur)}),
+            SKAction.wait(forDuration: 0.5),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: 0.60 * screenHeight, duration: dur)}),
+            SKAction.wait(forDuration: 1),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: 0.40 * screenHeight, duration: dur)}),
+            SKAction.wait(forDuration: 0.5),
+            SKAction.run({self.addEnemy(dimension: oppositeDimension, y: 0.20 * screenHeight, duration: dur)}),
             SKAction.wait(forDuration: 1.5),
             SKAction.run({
                 self.sentWave = false
@@ -1198,16 +1448,58 @@ class GameScene: SKScene
             })
         ]))
     }
-    
-    func waveType4()
-    {
-        
-    }
     //WAVES END
     
-    func collidedEnemyWithPlayer(Enemy: SKSpriteNode, Player: SKSpriteNode)
+    func tutorialCollidedEnemyWithPlayer(EnemyTutorial: SKSpriteNode, Player: SKSpriteNode)
     {
-        didGameOver()
+        EnemyTutorial.removeAllActions()
+        EnemyTutorial.removeFromParent()
+        
+        if EnemyTutorial == enemyTutorialShoot
+        {
+            moveEnemyTutorialShoot(duration: 4.0)
+            addChild(EnemyTutorial)
+        }
+        else if EnemyTutorial == enemyTutorialChange
+        {
+            moveTutorialChangeEnemy(duration: 4.0)
+            addChild(EnemyTutorial)
+        }
+    }
+    
+    func tutorialCollidedEnemyWithProjectile(EnemyTutorial: SKSpriteNode, Projectile: SKSpriteNode)
+    {
+        EnemyTutorial.removeFromParent()
+        Projectile.removeFromParent()
+        
+        if EnemyTutorial == enemyTutorialShoot
+        {
+            shootDone = true
+        }
+        else if EnemyTutorial == enemyTutorialChange
+        {
+            changeDimenEnemyDone = true
+        }
+    }
+    
+    func tutorialCollidedWallWithPlayer()
+    {
+        if !changeDimenWallDone
+        {
+            wallTutorial!.removeFromParent()
+            wallTutorial!.removeAllActions()
+            addChild(wallTutorial!)
+            wallTutorial?.run(SKAction.move(to: CGPoint(x: size.width, y: 0), duration: TimeInterval(0.0)))
+            moveTutorialChangeWall(duration: 4.0)
+        }
+        else if !avoidRedWallsDone && changeDimenWallDone
+        {
+            redWallTutorial!.removeFromParent()
+            redWallTutorial!.removeAllActions()
+            addChild(redWallTutorial!)
+            redWallTutorial?.run(SKAction.move(to: CGPoint(x: size.width, y: 0), duration: TimeInterval(0.0)))
+            moveRedWallTutorial(duration: 4.0)
+        }
     }
     
     func collidedEnemyWithProjectile(Enemy: SKSpriteNode, Projectile: SKSpriteNode)
@@ -1215,7 +1507,8 @@ class GameScene: SKScene
         Enemy.removeFromParent()
         Projectile.removeFromParent()
         
-        score += enemyScore
+        let actualEarnedScore = CGFloat(enemyScore) * difficultyScoreModifier
+        score += Int(actualEarnedScore)
     }
 }
 
@@ -1294,20 +1587,7 @@ extension GameScene: SKPhysicsContactDelegate
         {
             if contactCategory.contains([.Player, .Enemy])
             {
-                if contact.bodyA.category == .Player
-                {
-                    if let player = contact.bodyA.node as? SKSpriteNode, let enemy = contact.bodyB.node as? SKSpriteNode
-                    {
-                        collidedEnemyWithPlayer(Enemy: enemy, Player: player)
-                    }
-                }
-                else
-                {
-                    if let enemy = contact.bodyA.node as? SKSpriteNode, let player = contact.bodyB.node as? SKSpriteNode
-                    {
-                        collidedEnemyWithPlayer(Enemy: enemy, Player: player)
-                    }
-                }
+                didGameOver()
             }
             
             if contactCategory.contains([.Projectile, .Enemy])
@@ -1332,10 +1612,58 @@ extension GameScene: SKPhysicsContactDelegate
             {
                 didGameOver()
             }
+            
+            if !tutorialDone
+            {
+                if contactCategory.contains([.Player, .EnemyTutorial])
+                {
+                    if contact.bodyA.category == .Player
+                    {
+                        if let player = contact.bodyA.node as? SKSpriteNode, let enemyTutorial = contact.bodyB.node as? SKSpriteNode
+                        {
+                            tutorialCollidedEnemyWithPlayer(EnemyTutorial: enemyTutorial, Player: player)
+                        }
+                    }
+                    else
+                    {
+                        if let enemyTutorial = contact.bodyA.node as? SKSpriteNode, let player = contact.bodyB.node as? SKSpriteNode
+                        {
+                            tutorialCollidedEnemyWithPlayer(EnemyTutorial: enemyTutorial, Player: player)
+                        }
+                    }
+                }
+                
+                if contactCategory.contains([.Projectile, .EnemyTutorial])
+                {
+                    if contact.bodyA.category == .Projectile
+                    {
+                        if let projectile = contact.bodyA.node as? SKSpriteNode, let enemyTutorial = contact.bodyB.node as? SKSpriteNode
+                        {
+                            tutorialCollidedEnemyWithProjectile(EnemyTutorial: enemyTutorial, Projectile: projectile)
+                        }
+                    }
+                    else
+                    {
+                        if let enemyTutorial = contact.bodyA.node as? SKSpriteNode, let projectile = contact.bodyB.node as? SKSpriteNode
+                        {
+                            tutorialCollidedEnemyWithProjectile(EnemyTutorial: enemyTutorial, Projectile: projectile)
+                        }
+                    }
+                }
+                
+                if contactCategory.contains([.Player, .WallTutorial])
+                {
+                    tutorialCollidedWallWithPlayer()
+                }
+            }
         }
         else if contactCategory.contains([.WallAll, .Player])
         {
             didGameOver()
+        }
+        else if contactCategory.contains([.WallAllTutorial, .Player])
+        {
+            
         }
     }
 }

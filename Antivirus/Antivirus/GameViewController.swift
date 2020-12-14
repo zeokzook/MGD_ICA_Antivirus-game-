@@ -10,8 +10,6 @@ import UIKit
 import SpriteKit
 import GameplayKit
 
-
-
 class GameViewController: UIViewController
 {
     static var shared: GameViewController!
@@ -25,6 +23,13 @@ class GameViewController: UIViewController
     override func viewDidLoad()
     {
         super.viewDidLoad()
+        
+        if (defaults.object(forKey: "Skip Tutorial") == nil)
+        {
+            defaults.set(false, forKey: "Skip Tutorial")
+        }
+        
+        defaults.set(false, forKey: "Skip Tutorial")
         
         GameViewController.shared = self
         
